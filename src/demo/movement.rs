@@ -2,10 +2,6 @@
 //! controller. A character controller is the collection of systems that govern
 //! the movement of characters.
 //!
-//! In our case, the character controller has the following logic:
-//! - Set [`MovementController`] intent based on directional keyboard input.
-//!   This is done in the `player` module, as it is specific to the player
-//!   character.
 //! - Apply movement based on [`MovementController`] intent and maximum speed.
 //! - Wrap the character within the window.
 //!

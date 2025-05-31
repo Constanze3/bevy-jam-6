@@ -6,7 +6,6 @@ use bevy::{
 };
 
 use crate::{
-    AppSystems, PausableSystems,
     asset_tracking::LoadResource,
     demo::{
         animation::PlayerAnimation,
@@ -14,19 +13,15 @@ use crate::{
     },
 };
 
+use super::input::InputEvent;
+
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<Player>();
 
     app.register_type::<PlayerAssets>();
     app.load_resource::<PlayerAssets>();
 
-    // Record directional input as movement controls.
-    app.add_systems(
-        Update,
-        record_player_directional_input
-            .in_set(AppSystems::RecordInput)
-            .in_set(PausableSystems),
-    );
+    app.add_observer(handle_input);
 }
 
 /// The player character.
@@ -66,32 +61,13 @@ pub fn player(
 #[reflect(Component)]
 struct Player;
 
-fn record_player_directional_input(
-    input: Res<ButtonInput<KeyCode>>,
+fn handle_input(
+    trigger: Trigger<InputEvent>,
     mut controller_query: Query<&mut MovementController, With<Player>>,
 ) {
-    // Collect directional input.
-    let mut intent = Vec2::ZERO;
-    if input.pressed(KeyCode::KeyW) || input.pressed(KeyCode::ArrowUp) {
-        intent.y += 1.0;
-    }
-    if input.pressed(KeyCode::KeyS) || input.pressed(KeyCode::ArrowDown) {
-        intent.y -= 1.0;
-    }
-    if input.pressed(KeyCode::KeyA) || input.pressed(KeyCode::ArrowLeft) {
-        intent.x -= 1.0;
-    }
-    if input.pressed(KeyCode::KeyD) || input.pressed(KeyCode::ArrowRight) {
-        intent.x += 1.0;
-    }
-
-    // Normalize intent so that diagonal movement is the same speed as horizontal / vertical.
-    // This should be omitted if the input comes from an analog stick instead.
-    let intent = intent.normalize_or_zero();
-
     // Apply movement intent to controllers.
     for mut controller in &mut controller_query {
-        controller.intent = intent;
+        controller.intent = 0.05 * trigger.vector;
     }
 }
 
