@@ -9,6 +9,7 @@ mod input;
 pub mod level;
 mod movement;
 pub mod player;
+mod indicator;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((
@@ -16,5 +17,6 @@ pub(super) fn plugin(app: &mut App) {
         movement::plugin,
         player::plugin,
         input::plugin,
+        indicator::plugin,
     ));
 }
