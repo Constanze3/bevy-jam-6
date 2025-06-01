@@ -36,6 +36,6 @@ pub fn spawn_level(
         Transform::default(),
         Visibility::default(),
         StateScoped(Screen::Gameplay),
-        children![player(400.0, meshes, materials),],
+        children![player(20.0, 7000.0, meshes, materials),],
     ));
 }

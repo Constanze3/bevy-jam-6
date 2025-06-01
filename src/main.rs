@@ -12,6 +12,7 @@ mod menus;
 mod screens;
 mod theme;
 
+use avian2d::{PhysicsPlugins, prelude::PhysicsDebugPlugin};
 use bevy::{asset::AssetMetaCheck, prelude::*};
 use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
 
@@ -23,8 +24,8 @@ pub struct AppPlugin;
 
 impl Plugin for AppPlugin {
     fn build(&self, app: &mut App) {
-        // Add Bevy plugins.
-        app.add_plugins(
+        // Add core plugins.
+        app.add_plugins((
             DefaultPlugins
                 .set(AssetPlugin {
                     // Wasm builds will check for meta files (that don't exist) if this isn't set.
@@ -42,7 +43,8 @@ impl Plugin for AppPlugin {
                     .into(),
                     ..default()
                 }),
-        );
+            PhysicsPlugins::default(),
+        ));
 
         // Development plugins.
         app.add_plugins((
@@ -50,6 +52,7 @@ impl Plugin for AppPlugin {
                 enable_multipass_for_primary_context: true,
             },
             WorldInspectorPlugin::new(),
+            // PhysicsDebugPlugin::default(),
         ));
 
         // Add other plugins.

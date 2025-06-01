@@ -1,8 +1,12 @@
 //! Player-specific behavior.
 
+use avian2d::prelude::{
+    Collider, ExternalImpulse, GravityScale, LinearVelocity, RigidBody, TransformExtrapolation,
+    TransformInterpolation,
+};
 use bevy::prelude::*;
 
-use crate::demo::movement::{MovementController, ScreenWrap};
+use crate::demo::movement::ScreenWrap;
 
 use super::input::InputEvent;
 
@@ -14,7 +18,8 @@ pub(super) fn plugin(app: &mut App) {
 
 /// The player character.
 pub fn player(
-    max_speed: f32,
+    radius: f32,
+    force_scalar: f32,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) -> impl Bundle {
@@ -23,28 +28,35 @@ pub fn player(
 
     (
         Name::new("Player"),
-        Player,
+        Player {
+            radius,
+            force_scalar,
+        },
         Mesh2d(mesh),
         MeshMaterial2d(material),
         Transform::default(),
-        MovementController {
-            max_speed,
-            ..default()
-        },
+        RigidBody::Dynamic,
+        GravityScale(0.0),
+        Collider::circle(radius),
         ScreenWrap,
     )
 }
 
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
+#[derive(Component, Debug, Clone, Copy, Default, Reflect)]
 #[reflect(Component)]
-struct Player;
+pub struct Player {
+    pub radius: f32,
+    pub force_scalar: f32,
+}
 
 fn handle_input(
     trigger: Trigger<InputEvent>,
-    mut controller_query: Query<&mut MovementController, With<Player>>,
+    mut query: Query<(&Player, &mut ExternalImpulse, &mut LinearVelocity)>,
 ) {
-    // Apply movement intent to controllers.
-    for mut controller in &mut controller_query {
-        controller.intent = 0.05 * trigger.vector;
-    }
+    let (player, mut external_impulse, mut velocity) = query.single_mut().unwrap();
+
+    **velocity = Vec2::ZERO;
+
+    // apply force to player
+    external_impulse.apply_impulse(player.force_scalar * trigger.vector);
 }
