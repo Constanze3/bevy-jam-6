@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy::render::mesh::Mesh;
 use bevy_rapier2d::plugin::PhysicsSet;
 
-use crate::{AppSystems, PausableSystems};
+use crate::{PausableSystems, Pause};
 
 use super::input::InputController;
 use super::player::Player;
@@ -11,10 +11,11 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         PostUpdate,
         update_drag_indicator
-            .in_set(AppSystems::Update)
             .in_set(PausableSystems)
             .after(PhysicsSet::Writeback),
     );
+
+    app.add_systems(OnEnter(Pause(true)), hide_drag_indicator);
 }
 
 pub fn drag_indicator(
@@ -100,5 +101,11 @@ fn update_drag_indicator(
         for (_, _, mut indicator_visibility) in indicator_query.iter_mut() {
             *indicator_visibility = Visibility::Hidden;
         }
+    }
+}
+
+fn hide_drag_indicator(mut indicator_query: Query<&mut Visibility, With<DragIndicator>>) {
+    for mut indicator_visibility in indicator_query.iter_mut() {
+        *indicator_visibility = Visibility::Hidden;
     }
 }

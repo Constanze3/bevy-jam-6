@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{AppSystems, PausableSystems};
+use crate::{AppSystems, PausableSystems, Pause};
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<InputController>();
@@ -14,6 +14,8 @@ pub(super) fn plugin(app: &mut App) {
             .in_set(AppSystems::RecordInput)
             .in_set(PausableSystems),
     );
+
+    app.add_systems(OnEnter(Pause(true)), reset_input);
 }
 
 #[derive(Resource, Reflect, Default)]
@@ -75,4 +77,8 @@ fn calculate_vector(
     }
 
     None
+}
+
+fn reset_input(mut input_controller: ResMut<InputController>) {
+    *input_controller = InputController::default();
 }
