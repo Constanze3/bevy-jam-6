@@ -85,8 +85,8 @@ fn update_drag_indicator(
                 }
 
                 // adjust its position and rotation
-                // z = 1.0 to draw behind the player
-                indicator_transform.translation = (start + offset).extend(1.0);
+                // z = -5.0 to draw behind the player
+                indicator_transform.translation = (start + offset).extend(-5.0);
                 indicator_transform.rotation = Quat::from_rotation_z(angle);
 
                 *indicator_visibility = Visibility::Inherited;
