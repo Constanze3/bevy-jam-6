@@ -12,9 +12,9 @@ mod menus;
 mod screens;
 mod theme;
 
-use avian2d::{PhysicsPlugins, prelude::PhysicsDebugPlugin};
 use bevy::{asset::AssetMetaCheck, prelude::*};
 use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
+use bevy_rapier2d::{prelude::*, rapier::prelude::IntegrationParameters};
 
 fn main() -> AppExit {
     App::new().add_plugins(AppPlugin).run()
@@ -43,7 +43,18 @@ impl Plugin for AppPlugin {
                     .into(),
                     ..default()
                 }),
-            PhysicsPlugins::default(),
+            RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(50.0).with_custom_initialization(
+                RapierContextInitialization::InitializeDefaultRapierContext {
+                    integration_parameters: IntegrationParameters::default(),
+                    rapier_configuration: RapierConfiguration {
+                        gravity: Vec2::ZERO,
+                        physics_pipeline_active: true,
+                        query_pipeline_active: true,
+                        scaled_shape_subdivision: 10,
+                        force_update_from_transform_changes: false,
+                    },
+                },
+            ),
         ));
 
         // Development plugins.
@@ -52,7 +63,7 @@ impl Plugin for AppPlugin {
                 enable_multipass_for_primary_context: true,
             },
             WorldInspectorPlugin::new(),
-            // PhysicsDebugPlugin::default(),
+            RapierDebugRenderPlugin::default(),
         ));
 
         // Add other plugins.
