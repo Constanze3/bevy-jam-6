@@ -100,6 +100,17 @@ impl Plugin for AppPlugin {
         app.add_systems(Startup, spawn_camera);
 
         // Configure Rapier.
+        app.configure_sets(
+            PostUpdate,
+            (
+                PhysicsSet::SyncBackend,
+                PhysicsSet::StepSimulation,
+                PhysicsSet::Writeback,
+            )
+                .chain()
+                .before(TransformSystem::TransformPropagate),
+        );
+
         app.add_systems(
             PostUpdate,
             (
@@ -112,12 +123,14 @@ impl Plugin for AppPlugin {
                 RapierPhysicsPlugin::<NoUserData>::get_systems(PhysicsSet::Writeback)
                     .in_set(PhysicsSet::Writeback)
                     .in_set(PausableSystems),
-            )
-                .chain()
-                .before(TransformSystem::TransformPropagate),
+            ),
         );
-        app.add_systems(Last, bevy_rapier2d::plugin::systems::sync_removals);
-        app.init_resource::<TimestepMode>();
+
+        app.insert_resource(TimestepMode::Variable {
+            max_dt: 1.0 / 60.0,
+            time_scale: 1.0,
+            substeps: 2,
+        });
     }
 }
 

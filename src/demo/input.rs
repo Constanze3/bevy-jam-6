@@ -1,6 +1,5 @@
-use bevy::prelude::*;
-
 use crate::{AppSystems, PausableSystems, Pause};
+use bevy::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<InputController>();

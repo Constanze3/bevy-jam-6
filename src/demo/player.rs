@@ -11,9 +11,12 @@ pub(super) fn plugin(app: &mut App) {
 
     app.add_systems(
         Update,
-        handle_input
-            .in_set(AppSystems::Update)
-            .in_set(PausableSystems),
+        (
+            handle_input
+                .in_set(AppSystems::Update)
+                .in_set(PausableSystems),
+            slow_time.in_set(AppSystems::Update).in_set(PausableSystems),
+        ),
     );
 }
 
@@ -63,6 +66,21 @@ fn handle_input(
 
             // Apply force to player.
             external_impulse.impulse = player.force_scalar * event.vector;
+        }
+    }
+}
+
+fn slow_time(input: Res<ButtonInput<KeyCode>>, mut physics_time_step_mode: ResMut<TimestepMode>) {
+    if input.just_pressed(KeyCode::Enter) {
+        match physics_time_step_mode.as_mut() {
+            TimestepMode::Variable { time_scale, .. } => {
+                if *time_scale < 1.0 {
+                    *time_scale = 1.0;
+                } else {
+                    *time_scale = 0.1;
+                }
+            }
+            _ => {}
         }
     }
 }
