@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::{asset_tracking::LoadResource, audio::music, demo::player::player, screens::Screen};
+use crate::{asset_tracking::LoadResource, demo::player::player, screens::Screen};
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<LevelAssets>();
@@ -28,7 +28,6 @@ impl FromWorld for LevelAssets {
 /// A system that spawns the main level.
 pub fn spawn_level(
     mut commands: Commands,
-    level_assets: Res<LevelAssets>,
     meshes: ResMut<Assets<Mesh>>,
     materials: ResMut<Assets<ColorMaterial>>,
 ) {
@@ -37,12 +36,6 @@ pub fn spawn_level(
         Transform::default(),
         Visibility::default(),
         StateScoped(Screen::Gameplay),
-        children![
-            player(400.0, meshes, materials),
-            (
-                Name::new("Gameplay Music"),
-                music(level_assets.music.clone())
-            )
-        ],
+        children![player(400.0, meshes, materials),],
     ));
 }
