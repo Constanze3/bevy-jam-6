@@ -43,18 +43,20 @@ impl Plugin for AppPlugin {
                     .into(),
                     ..default()
                 }),
-            RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(50.0).with_custom_initialization(
-                RapierContextInitialization::InitializeDefaultRapierContext {
-                    integration_parameters: IntegrationParameters::default(),
-                    rapier_configuration: RapierConfiguration {
-                        gravity: Vec2::ZERO,
-                        physics_pipeline_active: true,
-                        query_pipeline_active: true,
-                        scaled_shape_subdivision: 10,
-                        force_update_from_transform_changes: false,
+            RapierPhysicsPlugin::<NoUserData>::default()
+                .with_custom_initialization(
+                    RapierContextInitialization::InitializeDefaultRapierContext {
+                        integration_parameters: IntegrationParameters::default(),
+                        rapier_configuration: RapierConfiguration {
+                            gravity: Vec2::ZERO,
+                            physics_pipeline_active: true,
+                            query_pipeline_active: true,
+                            scaled_shape_subdivision: 10,
+                            force_update_from_transform_changes: false,
+                        },
                     },
-                },
-            ),
+                )
+                .with_default_system_setup(false),
         ));
 
         // Development plugins.
@@ -92,9 +94,30 @@ impl Plugin for AppPlugin {
         // Set up the `Pause` state.
         app.init_state::<Pause>();
         app.configure_sets(Update, PausableSystems.run_if(in_state(Pause(false))));
+        app.configure_sets(PostUpdate, PausableSystems.run_if(in_state(Pause(false))));
 
         // Spawn the main camera.
         app.add_systems(Startup, spawn_camera);
+
+        // Configure Rapier.
+        app.add_systems(
+            PostUpdate,
+            (
+                RapierPhysicsPlugin::<NoUserData>::get_systems(PhysicsSet::SyncBackend)
+                    .in_set(PhysicsSet::SyncBackend)
+                    .in_set(PausableSystems),
+                RapierPhysicsPlugin::<NoUserData>::get_systems(PhysicsSet::StepSimulation)
+                    .in_set(PhysicsSet::StepSimulation)
+                    .in_set(PausableSystems),
+                RapierPhysicsPlugin::<NoUserData>::get_systems(PhysicsSet::Writeback)
+                    .in_set(PhysicsSet::Writeback)
+                    .in_set(PausableSystems),
+            )
+                .chain()
+                .before(TransformSystem::TransformPropagate),
+        );
+        app.add_systems(Last, bevy_rapier2d::plugin::systems::sync_removals);
+        app.init_resource::<TimestepMode>();
     }
 }
 

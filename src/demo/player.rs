@@ -61,7 +61,7 @@ fn handle_input(
         for (player, mut external_impulse, mut velocity) in query.iter_mut() {
             velocity.linvel = Vec2::ZERO;
 
-            // apply force to player
+            // Apply force to player.
             external_impulse.impulse = player.force_scalar * event.vector;
         }
     }

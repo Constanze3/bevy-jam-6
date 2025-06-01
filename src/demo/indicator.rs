@@ -74,7 +74,7 @@ fn update_drag_indicator(
 
                 let offset = Vec2::new(length / 2.0, 0.0).rotate(Vec2::from_angle(angle));
 
-                // create a thin rectangle mesh for the line
+                // Create a thin rectangle mesh for the line.
                 let new_mesh: Mesh = Rectangle::new(length, indicator.thickness).into();
                 let mesh_id = indicator.mesh.id();
 
@@ -84,8 +84,8 @@ fn update_drag_indicator(
                     meshes.insert(mesh_id, new_mesh);
                 }
 
-                // adjust its position and rotation
-                // z = -5.0 to draw behind the player
+                // Adjust its position and rotation.
+                // z = -5.0 to draw behind the player.
                 indicator_transform.translation = (start + offset).extend(-5.0);
                 indicator_transform.rotation = Quat::from_rotation_z(angle);
 

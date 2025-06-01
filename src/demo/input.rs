@@ -36,18 +36,18 @@ fn record_input(
 ) {
     let window = window_query.single().unwrap();
 
-    // record initial mouse position
+    // Record initial mouse position.
     if input.just_pressed(MouseButton::Left) {
         input_controller.initial_position = window.cursor_position();
     }
 
-    // update vector of input controller
+    // Update vector of input controller.
     if input.pressed(MouseButton::Left) {
         input_controller.vector =
             calculate_vector(input_controller.initial_position, window.cursor_position());
     }
 
-    // input event
+    // Send input event.
     if input.just_released(MouseButton::Left) {
         let vector = calculate_vector(input_controller.initial_position, window.cursor_position());
 
@@ -67,7 +67,7 @@ fn calculate_vector(
     if let Some(initial_position) = initial_position {
         if let Some(position) = current_position {
             let mut vector = initial_position - position;
-            // in screen coordinates the y-axis is reversed
+            // In screen coordinates the y-axis is reversed.
             vector.y *= -1.0;
 
             return Some(vector);
