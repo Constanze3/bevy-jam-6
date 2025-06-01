@@ -32,7 +32,7 @@ fn record_input(
     input: Res<ButtonInput<MouseButton>>,
     mut input_controller: ResMut<InputController>,
     window_query: Query<&Window>,
-    mut commands: Commands,
+    mut events: EventWriter<InputEvent>,
 ) {
     let window = window_query.single().unwrap();
 
@@ -52,7 +52,7 @@ fn record_input(
         let vector = calculate_vector(input_controller.initial_position, window.cursor_position());
 
         if let Some(vector) = vector {
-            commands.trigger(InputEvent { vector });
+            events.write(InputEvent { vector });
         }
 
         input_controller.initial_position = None;

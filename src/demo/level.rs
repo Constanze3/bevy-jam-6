@@ -5,6 +5,8 @@ use bevy_rapier2d::prelude::{Collider, RigidBody};
 
 use crate::{asset_tracking::LoadResource, demo::player::player, screens::Screen};
 
+use super::indicator::drag_indicator;
+
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<LevelAssets>();
     app.load_resource::<LevelAssets>();
@@ -39,6 +41,13 @@ pub fn spawn_level(
         StateScoped(Screen::Gameplay),
         children![
             player(20.0, 7000.0, &mut meshes, &mut materials),
+            drag_indicator(
+                6.0,
+                0.4,
+                Color::hsl(0.0, 0.0, 0.6),
+                &mut meshes,
+                &mut materials
+            ),
             obstacle(Vec2 { x: 100.0, y: 0.0 }, 50.0, &mut meshes, &mut materials),
         ],
     ));
@@ -52,7 +61,6 @@ fn obstacle(
 ) -> impl Bundle {
     let mesh = meshes.add(Rectangle::new(size, size));
     let material = materials.add(Color::linear_rgb(1.0, 1.0, 1.0));
-
     (
         Name::new("Obstacle"),
         Transform::from_translation(translation.extend(0.0)),

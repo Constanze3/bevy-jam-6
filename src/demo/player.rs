@@ -4,12 +4,17 @@ use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
 use super::input::InputEvent;
-use crate::demo::movement::ScreenWrap;
+use crate::{AppSystems, PausableSystems, demo::movement::ScreenWrap};
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<Player>();
 
-    app.add_observer(handle_input);
+    app.add_systems(
+        Update,
+        handle_input
+            .in_set(AppSystems::Update)
+            .in_set(PausableSystems),
+    );
 }
 
 /// The player character.
@@ -49,13 +54,15 @@ pub struct Player {
 }
 
 fn handle_input(
-    trigger: Trigger<InputEvent>,
+    mut events: EventReader<InputEvent>,
     mut query: Query<(&Player, &mut ExternalImpulse, &mut Velocity)>,
 ) {
-    let (player, mut external_impulse, mut velocity) = query.single_mut().unwrap();
+    for event in events.read() {
+        for (player, mut external_impulse, mut velocity) in query.iter_mut() {
+            velocity.linvel = Vec2::ZERO;
 
-    velocity.linvel = Vec2::ZERO;
-
-    // apply force to player
-    external_impulse.impulse = player.force_scalar * trigger.vector;
+            // apply force to player
+            external_impulse.impulse = player.force_scalar * event.vector;
+        }
+    }
 }
