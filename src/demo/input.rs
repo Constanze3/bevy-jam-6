@@ -20,6 +20,7 @@ pub(super) fn plugin(app: &mut App) {
 #[reflect(Resource)]
 pub struct InputController {
     pub initial_position: Option<Vec2>,
+    pub vector: Option<Vec2>,
 }
 
 #[derive(Event)]
@@ -40,18 +41,38 @@ fn record_input(
         input_controller.initial_position = window.cursor_position();
     }
 
-    // calculate vector and send InputEvent
-    if input.just_released(MouseButton::Left) {
-        if let Some(initial_position) = input_controller.initial_position {
-            if let Some(position) = window.cursor_position() {
-                let mut vector = initial_position - position;
-                // in screen coordinates the y-axis is reversed
-                vector.y *= -1.0;
+    // update vector of input controller
+    if input.pressed(MouseButton::Left) {
+        input_controller.vector =
+            calculate_vector(input_controller.initial_position, window.cursor_position());
+    }
 
-                commands.trigger(InputEvent { vector });
-            }
+    // input event
+    if input.just_released(MouseButton::Left) {
+        let vector = calculate_vector(input_controller.initial_position, window.cursor_position());
+
+        if let Some(vector) = vector {
+            commands.trigger(InputEvent { vector });
         }
 
         input_controller.initial_position = None;
+        input_controller.vector = None;
     }
+}
+
+fn calculate_vector(
+    initial_position: Option<Vec2>,
+    current_position: Option<Vec2>,
+) -> Option<Vec2> {
+    if let Some(initial_position) = initial_position {
+        if let Some(position) = current_position {
+            let mut vector = initial_position - position;
+            // in screen coordinates the y-axis is reversed
+            vector.y *= -1.0;
+
+            return Some(vector);
+        }
+    }
+
+    None
 }
