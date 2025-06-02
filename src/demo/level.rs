@@ -34,7 +34,7 @@ pub fn spawn_level(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    let atom_radius = 50.0;
+    let atom_radius = 10.0;
     let num_parts = 6;
     let part_radius = 10.0;
     let angle_step = std::f32::consts::TAU / num_parts as f32;
@@ -55,7 +55,7 @@ pub fn spawn_level(
             ),
             obstacle(Vec2 { x: 100.0, y: 0.0 }, 50.0, &mut meshes, &mut materials),
             (
-                atom(atom_radius, num_parts, part_radius, &mut meshes, &mut materials),
+                atom(Vec2 { x: 100.0, y: 0.0 }, atom_radius, num_parts, part_radius, &mut meshes, &mut materials),
                 children![
                     atom_part(0.0 * angle_step, atom_radius, part_radius, &mut meshes, &mut materials),
                     atom_part(1.0 * angle_step, atom_radius, part_radius, &mut meshes, &mut materials),

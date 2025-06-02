@@ -45,6 +45,7 @@ fn cleanup_arrows(
 }
 
 pub fn atom(
+    translation: Vec2,
     radius: f32,
     num_parts: usize,
     part_radius: f32,
@@ -82,6 +83,7 @@ pub fn atom(
         Mesh2d(mesh),
         MeshMaterial2d(material),
         Transform::default(),
+        Transform::from_translation(translation.extend(0.0)),
         RigidBody::Dynamic,
         Collider::ball(radius),
         Velocity::zero(),
