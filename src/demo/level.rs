@@ -1,8 +1,8 @@
 //! Spawn the main level.
 
-use bevy::{prelude::*, window::PrimaryWindow};
+use bevy::{prelude::*, ui::update, window::{PrimaryWindow, WindowResized}};
 use bevy_inspector_egui::egui::collapsing_header;
-use bevy_rapier2d::prelude::{Collider, RigidBody};
+use bevy_rapier2d::prelude::{Collider, Restitution, RigidBody};
 
 use crate::{asset_tracking::LoadResource, demo::player::player, screens::Screen};
 
@@ -11,6 +11,7 @@ use super::{atom::atom_seed, indicator::drag_indicator};
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<LevelAssets>();
     app.load_resource::<LevelAssets>();
+    app.add_systems(Update, update_screen_bounds);
 }
 
 #[derive(Resource, Asset, Clone, Reflect)]
@@ -97,23 +98,66 @@ fn spawn_screen_bounds(commands: &mut Commands, window: &Window) {
         Transform::from_xyz(-width / 2.0, 0.0, 0.0),
         RigidBody::Fixed,
         Collider::cuboid(1.0, height / 2.0),
+        Restitution::coefficient(0.5),
     ));
     commands.spawn((
         Name::new("Right Wall"),
         Transform::from_xyz(width / 2.0, 0.0, 0.0),
         RigidBody::Fixed,
         Collider::cuboid(1.0, height / 2.0),
+        Restitution::coefficient(0.5),
     ));
     commands.spawn((
         Name::new("Top Wall"),
         Transform::from_xyz(0.0, height / 2.0, 0.0),
         RigidBody::Fixed,
         Collider::cuboid(width / 2.0, 1.0),
+        Restitution::coefficient(0.5),
     ));
     commands.spawn((
         Name::new("Bottom Wall"),
         Transform::from_xyz(0.0, -height / 2.0, 0.0),
         RigidBody::Fixed,
         Collider::cuboid(width / 2.0, 1.0),
+        Restitution::coefficient(0.5),
     ));
+}
+
+// Add this system to handle window resizing
+fn update_screen_bounds(
+    mut resize_events: EventReader<WindowResized>,
+    mut collider_query: Query<(&Name, &mut Transform, &mut Collider)>,
+) {
+    for event in resize_events.read() {
+        let width = event.width;
+        let height = event.height;
+        let half_width = width / 2.0;
+        let half_height = height / 2.0;
+
+        for (name, mut transform, mut collider) in collider_query.iter_mut() {
+            match name.as_str() {
+                "Left Wall" | "Right Wall" => {
+                    // Update vertical walls
+                    *collider = Collider::cuboid(1.0, half_height);
+                    // Update positions
+                    if name.as_str() == "Left Wall" {
+                        transform.translation.x = -half_width;
+                    } else {
+                        transform.translation.x = half_width;
+                    }
+                }
+                "Top Wall" | "Bottom Wall" => {
+                    // Update horizontal walls
+                    *collider = Collider::cuboid(half_width, 1.0);
+                    // Update positions
+                    if name.as_str() == "Top Wall" {
+                        transform.translation.y = half_height;
+                    } else {
+                        transform.translation.y = -half_height;
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
 }

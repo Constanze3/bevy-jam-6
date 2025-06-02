@@ -43,6 +43,7 @@ pub fn player(
         Ccd::enabled(),
         Sleeping::disabled(),
         Collider::ball(radius),
+        Restitution::coefficient(0.5),
         ActiveEvents::COLLISION_EVENTS,
         ActiveCollisionTypes::default() | ActiveCollisionTypes::DYNAMIC_DYNAMIC,
         Velocity::default(),
