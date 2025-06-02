@@ -96,7 +96,7 @@ pub fn particle_bundle(
         Collider::ball(particle.radius),
         ActiveEvents::COLLISION_EVENTS,
         Velocity {
-            linvel: particle.initial_velocity.clone(),
+            linvel: particle.initial_velocity,
             angvel: 0.0,
         },
         particle,
@@ -210,7 +210,7 @@ fn split_particle(
         commands.spawn(particle_bundle(
             spawn_position,
             sub_particle,
-            &particle_assets,
+            particle_assets,
         ));
     }
 
