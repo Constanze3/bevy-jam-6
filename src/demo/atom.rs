@@ -59,6 +59,8 @@ pub fn atom_seed(
         Transform::from_translation(translation.extend(0.0)),
         RigidBody::Dynamic,
         Collider::ball(radius),
+        ActiveEvents::COLLISION_EVENTS,
+        ActiveCollisionTypes::default() | ActiveCollisionTypes::DYNAMIC_DYNAMIC,
         Velocity::zero(),
         Visibility::Visible,
     )
@@ -112,7 +114,10 @@ pub fn atom_chain_reaction(
 
                     // If this is the AtomSeed, break it into parts
                     if let Some(name) = name {
+                        println!("Collision with entity: {:?}", name.as_str());
                         if name.as_str() == "AtomSeed" {
+                            println!("Breaking AtomSeed!");
+
                             commands.entity(entity).despawn();
 
                             for i in 0..num_parts {
@@ -155,6 +160,19 @@ pub fn direction_arrow_bundle(
     )
 }
 
+fn debug_collision_events(
+    mut collision_events: EventReader<CollisionEvent>,
+    query: Query<&Name>,
+) {
+    for event in collision_events.read() {
+        if let CollisionEvent::Started(e1, e2, _) = event {
+            let name1 = query.get(*e1).map(|n| n.as_str()).unwrap_or("?");
+            let name2 = query.get(*e2).map(|n| n.as_str()).unwrap_or("?");
+            println!("Collision: {} <-> {}", name1, name2);
+        }
+    }
+}
+
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(Update, (atom_chain_reaction, cleanup_arrows));
+    app.add_systems(Update, (atom_chain_reaction, cleanup_arrows, debug_collision_events));
 }
