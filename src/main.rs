@@ -57,16 +57,14 @@ impl Plugin for AppPlugin {
                     },
                 )
                 .with_default_system_setup(false),
+            RapierDebugRenderPlugin::default(),
         ));
 
         // Development plugins.
-        app.add_plugins((
-            EguiPlugin {
-                enable_multipass_for_primary_context: true,
-            },
-            WorldInspectorPlugin::new(),
-            RapierDebugRenderPlugin::default(),
-        ));
+        app.add_plugins(EguiPlugin {
+            enable_multipass_for_primary_context: true,
+        });
+        app.add_plugins(WorldInspectorPlugin::new());
 
         // Add other plugins.
         app.add_plugins((

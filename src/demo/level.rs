@@ -72,7 +72,7 @@ pub fn spawn_level(
     ));
 }
 
-fn obstacle(
+pub fn obstacle(
     translation: Vec2,
     size: f32,
     meshes: &mut Assets<Mesh>,

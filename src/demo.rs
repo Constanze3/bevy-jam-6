@@ -11,6 +11,7 @@ mod input;
 pub mod level;
 mod movement;
 pub mod player;
+pub mod editor;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((
@@ -20,5 +21,6 @@ pub(super) fn plugin(app: &mut App) {
         input::plugin,
         indicator::plugin,
         atom::plugin,
+        editor::plugin,
     ));
 }
