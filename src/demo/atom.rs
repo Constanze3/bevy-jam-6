@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
-use super::{indicator::DragIndicator, input::InputController, player::Player};
 
 #[derive(Component)]
 pub struct Atom;
