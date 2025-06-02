@@ -6,9 +6,7 @@ use bevy_rapier2d::prelude::*;
 pub struct Atom;
 
 #[derive(Component)]
-pub struct AtomPart {
-    pub parent: Entity,
-}
+pub struct AtomPart;
 
 #[derive(Component)]
 pub struct Breakable;
@@ -122,7 +120,7 @@ fn atom_chain_reaction(
 ) {
     for event in collision_events.read() {
         if let CollisionEvent::Started(e1, e2, _) = event {
-            for (entity, atom_part, transform, break_dir) in &atom_part_query {
+            for (entity, _atom_part, transform, break_dir) in &atom_part_query {
                 if *e1 == entity || *e2 == entity {
                     let pos = transform.translation.truncate();
                     let angle = break_dir.0.y.atan2(break_dir.0.x);
@@ -133,7 +131,6 @@ fn atom_chain_reaction(
                         &asset_server,
                         pos,
                         angle,
-                        Vec2::new(30.0, 15.0), // Adjust size as needed
                     );
 
                     // Break the atom part
@@ -150,7 +147,6 @@ fn direction_arrow(
     asset_server: &AssetServer,
     position: Vec2,
     angle: f32,
-    size: Vec2,
 ) {
     let texture = asset_server.load("images/arrow.png");
     commands.spawn((
