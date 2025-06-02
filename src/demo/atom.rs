@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{math::VectorSpace, prelude::*};
 use bevy_rapier2d::prelude::*;
 
 
@@ -41,45 +41,21 @@ fn cleanup_arrows(
     }
 }
 
-pub fn atom(
+pub fn atom_seed(
     translation: Vec2,
     radius: f32,
-    num_parts: usize,
-    part_radius: f32,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<ColorMaterial>,
 ) -> impl Bundle {
     let mesh = meshes.add(Circle::new(radius));
     let material = materials.add(Color::hsl(200.0, 0.7, 0.6));
-
-    let mut children = Vec::new();
-    let angle_step = std::f32::consts::TAU / num_parts as f32;
-
-    // Create atom parts as children
-    for i in 0..num_parts {
-        let angle = i as f32 * angle_step;
-        let break_direction = Vec2::new(angle.cos(), angle.sin());
-        let offset = break_direction * radius;
-
-        children.push((
-            Name::new("AtomPart"),
-            Breakable,
-            BreakDirection(break_direction),
-            Mesh2d(meshes.add(Circle::new(part_radius))),
-            MeshMaterial2d(materials.add(Color::hsl(200.0, 0.7, 0.6))),
-            Transform::from_translation(offset.extend(0.0)),
-            RigidBody::Dynamic,
-            Collider::ball(part_radius),
-            Velocity::zero(),
-        ));
-    }
-
     (
-        Name::new("Atom"),
+        Name::new("AtomSeed"),
         Atom,
+        AtomPart, // So it can be detected by the collision system
+        Breakable,
         Mesh2d(mesh),
         MeshMaterial2d(material),
-        Transform::default(),
         Transform::from_translation(translation.extend(0.0)),
         RigidBody::Dynamic,
         Collider::ball(radius),
@@ -88,52 +64,71 @@ pub fn atom(
     )
 }
 
-// In atom.rs
-pub fn atom_part(
+pub fn atom_part_with_arrow(
     angle: f32,
+    origin: Vec2,
     radius: f32,
-    part_radius: f32,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<ColorMaterial>,
+    asset_server: &AssetServer,
 ) -> impl Bundle {
     let break_direction = Vec2::new(angle.cos(), angle.sin());
     let offset = break_direction * radius;
     (
         Name::new("AtomPart"),
+        AtomPart,
         Breakable,
         BreakDirection(break_direction),
-        Mesh2d(meshes.add(Circle::new(part_radius))),
+        Mesh2d(meshes.add(Circle::new(radius))),
         MeshMaterial2d(materials.add(Color::hsl(200.0, 0.7, 0.6))),
-        Transform::from_translation(offset.extend(0.0)),
-        RigidBody::Dynamic,
-        Collider::ball(part_radius),
+        Transform::from_translation((origin + offset).extend(0.0)),
+        Collider::ball(radius),
         Velocity::zero(),
+        Visibility::Visible,
+        children![
+            direction_arrow_bundle(angle, asset_server)
+        ],
     )
 }
 
-
-fn atom_chain_reaction(
+// System to handle breaking the atom seed into parts
+pub fn atom_chain_reaction(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut collision_events: EventReader<CollisionEvent>,
-    atom_part_query: Query<(Entity, &AtomPart, &Transform, &BreakDirection), With<Breakable>>,
+    atom_part_query: Query<(Entity, &Transform, Option<&BreakDirection>, Option<&Name>), With<Breakable>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
+    let num_parts = 6;
+    let part_radius = 10.0;
+    let angle_step = std::f32::consts::TAU / num_parts as f32;
+
     for event in collision_events.read() {
         if let CollisionEvent::Started(e1, e2, _) = event {
-            for (entity, _atom_part, transform, break_dir) in &atom_part_query {
+            for (entity, transform, break_dir, name) in &atom_part_query {
                 if *e1 == entity || *e2 == entity {
                     let pos = transform.translation.truncate();
-                    let angle = break_dir.0.y.atan2(break_dir.0.x);
 
-                    // Spawn the arrow sprite
-                    direction_arrow(
-                        &mut commands,
-                        &asset_server,
-                        pos,
-                        angle,
-                    );
+                    // If this is the AtomSeed, break it into parts
+                    if let Some(name) = name {
+                        if name.as_str() == "AtomSeed" {
+                            commands.entity(entity).despawn();
 
-                    // Break the atom part
+                            for i in 0..num_parts {
+                                let angle = i as f32 * angle_step;
+                                let part = atom_part_with_arrow(
+                                    angle,
+                                    pos,
+                                    part_radius,
+                                    &mut meshes,
+                                    &mut materials,
+                                    &asset_server
+                                );
+                                commands.spawn(part);
+                            }
+                        }
+                    }
                     commands.entity(entity).despawn();
                 }
             }
@@ -141,29 +136,23 @@ fn atom_chain_reaction(
     }
 }
 
-
-fn direction_arrow(
-    commands: &mut Commands,
-    asset_server: &AssetServer,
-    position: Vec2,
+pub fn direction_arrow_bundle(
     angle: f32,
-) {
+    asset_server: &AssetServer,
+) -> impl Bundle {
     let texture = asset_server.load("images/arrow.png");
-    commands.spawn((
+    (
         Name::new("Direction Arrow"),
         Sprite::from_image(
             texture,
         ),
         Transform {
-            translation: position.extend(1.0),
+            translation: Vec3::new(0.0, 0.0, 1.0),
             rotation: Quat::from_rotation_z(angle),
             ..default()
         },
         Visibility::Visible,
-        GlobalTransform::default(),
-        ExpirationTimer(Timer::from_seconds(0.5, TimerMode::Once)),
-    ));
-
+    )
 }
 
 pub(super) fn plugin(app: &mut App) {
