@@ -75,15 +75,12 @@ fn handle_input(
 
 fn slow_time(input: Res<ButtonInput<KeyCode>>, mut physics_time_step_mode: ResMut<TimestepMode>) {
     if input.just_pressed(KeyCode::Enter) {
-        match physics_time_step_mode.as_mut() {
-            TimestepMode::Variable { time_scale, .. } => {
-                if *time_scale < 1.0 {
-                    *time_scale = 1.0;
-                } else {
-                    *time_scale = 0.1;
-                }
+        if let TimestepMode::Variable { time_scale, .. } = physics_time_step_mode.as_mut() {
+            if *time_scale < 1.0 {
+                *time_scale = 1.0;
+            } else {
+                *time_scale = 0.1;
             }
-            _ => {}
         }
     }
 }
