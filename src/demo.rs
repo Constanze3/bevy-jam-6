@@ -6,10 +6,10 @@
 use bevy::prelude::*;
 
 mod indicator;
-mod atom;
 mod input;
 pub mod level;
 mod movement;
+mod particle;
 pub mod player;
 
 pub(super) fn plugin(app: &mut App) {
@@ -19,6 +19,6 @@ pub(super) fn plugin(app: &mut App) {
         player::plugin,
         input::plugin,
         indicator::plugin,
-        atom::plugin,
+        particle::plugin,
     ));
 }

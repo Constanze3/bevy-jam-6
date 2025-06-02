@@ -5,7 +5,10 @@ use bevy_rapier2d::prelude::{Collider, RigidBody};
 
 use crate::{asset_tracking::LoadResource, demo::player::player, screens::Screen};
 
-use super::{atom::atom_seed, indicator::drag_indicator};
+use super::{
+    indicator::drag_indicator,
+    particle::{Particle, ParticleAssets, particle_bundle},
+};
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<LevelAssets>();
@@ -33,11 +36,11 @@ pub fn spawn_level(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    particle_assets: Res<ParticleAssets>,
 ) {
-    let atom_radius = 50.0;
-    // let num_parts = 6;
-    // let part_radius = 10.0;
-    // let angle_step = std::f32::consts::TAU / num_parts as f32;
+    let particle_radius = 15.0;
+    let particle_mesh = meshes.add(Circle::new(particle_radius));
+    let particle_material = materials.add(Color::Srgba(Srgba::hex("0f95e2").unwrap()));
 
     commands.spawn((
         Name::new("Level"),
@@ -53,8 +56,33 @@ pub fn spawn_level(
                 &mut meshes,
                 &mut materials
             ),
-            obstacle(Vec2 { x: 100.0, y: 0.0 }, 50.0, &mut meshes, &mut materials),
-            atom_seed(Vec2 { x: -100.0, y: 0.0 }, atom_radius, &mut meshes, &mut materials),
+            obstacle(vec2(100.0, 0.0), 50.0, &mut meshes, &mut materials),
+            particle_bundle(
+                vec2(-100.0, 0.0),
+                Particle {
+                    radius: particle_radius,
+                    initial_velocity: Vec2::ZERO,
+                    sub_particles: vec![
+                        Particle {
+                            radius: particle_radius,
+                            initial_velocity: vec2(0.0, -200.0),
+                            sub_particles: vec![],
+                            mesh: particle_mesh.clone(),
+                            material: particle_material.clone()
+                        },
+                        Particle {
+                            radius: particle_radius,
+                            initial_velocity: vec2(0.0, 200.0),
+                            sub_particles: vec![],
+                            mesh: particle_mesh.clone(),
+                            material: particle_material.clone()
+                        }
+                    ],
+                    mesh: particle_mesh.clone(),
+                    material: particle_material.clone()
+                },
+                particle_assets.as_ref()
+            )
         ],
     ));
 }
