@@ -1,5 +1,8 @@
 use bevy::prelude::*;
-use bevy_inspector_egui::{bevy_egui::EguiContexts, egui::{self, debug_text::print}};
+use bevy_inspector_egui::{
+    bevy_egui::{EguiContextPass, EguiContexts},
+    egui,
+};
 
 use crate::{demo::particle::{self, particle_bundle, Particle}, Pause};
 
@@ -32,11 +35,18 @@ enum EditorTool {
 pub(super) fn plugin(app: &mut App) {
     app.init_state::<EditorState>()
         .init_resource::<EditorSettings>()
-        .add_systems(Update, (
-            toggle_editor,
-            editor_ui.run_if(in_state(EditorState::Enabled)),
-            handle_editor_input.run_if(in_state(EditorState::Enabled)),
-        ));
+        .add_systems(
+            EguiContextPass,
+            (
+                toggle_editor,
+                editor_ui.run_if(in_state(EditorState::Enabled)),
+            ),
+        );
+
+    app.add_systems(
+        Update,
+        handle_editor_input.run_if(in_state(EditorState::Enabled)),
+    );
 }
 
 fn toggle_editor(
@@ -61,10 +71,7 @@ fn toggle_editor(
     }
 }
 
-fn editor_ui(
-    mut contexts: EguiContexts,
-    mut editor_settings: ResMut<EditorSettings>,
-) {
+fn editor_ui(mut contexts: EguiContexts, mut editor_settings: ResMut<EditorSettings>) {
     egui::Window::new("Level Editor")
         .default_pos([10.0, 10.0])
         .collapsible(true)
@@ -74,10 +81,26 @@ fn editor_ui(
             ui.heading("Tools");
 
             ui.horizontal(|ui| {
-                ui.selectable_value(&mut editor_settings.selected_tool, EditorTool::Select, "🖱 Select");
-                ui.selectable_value(&mut editor_settings.selected_tool, EditorTool::PlaceAtom, "⚛ Atom");
-                ui.selectable_value(&mut editor_settings.selected_tool, EditorTool::PlaceObstacle, "⬜ Obstacle");
-                ui.selectable_value(&mut editor_settings.selected_tool, EditorTool::PlacePlayer, "● Player");
+                ui.selectable_value(
+                    &mut editor_settings.selected_tool,
+                    EditorTool::Select,
+                    "🖱 Select",
+                );
+                ui.selectable_value(
+                    &mut editor_settings.selected_tool,
+                    EditorTool::PlaceAtom,
+                    "⚛  Atom",
+                );
+                ui.selectable_value(
+                    &mut editor_settings.selected_tool,
+                    EditorTool::PlaceObstacle,
+                    "⬜ Obstacle",
+                );
+                ui.selectable_value(
+                    &mut editor_settings.selected_tool,
+                    EditorTool::PlacePlayer,
+                    "● Player",
+                );
             });
 
             ui.separator();
@@ -85,12 +108,16 @@ fn editor_ui(
 
             match editor_settings.selected_tool {
                 EditorTool::PlaceAtom => {
-                    ui.add(egui::Slider::new(&mut editor_settings.atom_radius, 10.0..=100.0)
-                        .text("Atom Radius"));
+                    ui.add(
+                        egui::Slider::new(&mut editor_settings.atom_radius, 10.0..=100.0)
+                            .text("Atom Radius"),
+                    );
                 }
                 EditorTool::PlaceObstacle => {
-                    ui.add(egui::Slider::new(&mut editor_settings.obstacle_size, 10.0..=200.0)
-                        .text("Obstacle Size"));
+                    ui.add(
+                        egui::Slider::new(&mut editor_settings.obstacle_size, 10.0..=200.0)
+                            .text("Obstacle Size"),
+                    );
                 }
                 _ => {}
             }
@@ -123,19 +150,21 @@ fn handle_editor_input(
 ) {
     let ctx = contexts.ctx_mut();
     if buttons.just_pressed(MouseButton::Left) && ctx.is_pointer_over_area() {
-
         println!("Left click detected in editor mode - not over UI"); // Debug print
 
-        let (camera, camera_transform) = camera_q.single()
+        let (camera, camera_transform) = camera_q
+            .single()
             .expect("Expected exactly one camera in the scene");
-        let window = windows.single()
+        let window = windows
+            .single()
             .expect("Expected exactly one window in the scene");
 
         if let Some(cursor_pos) = window.cursor_position() {
             println!("Cursor position: {:?}", cursor_pos); // Debug print
         }
 
-        if let Some(world_position) = window.cursor_position()
+        if let Some(world_position) = window
+            .cursor_position()
             .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor).ok())
             .map(|ray| ray.origin.truncate())
         {
@@ -183,17 +212,11 @@ fn handle_editor_input(
                     ));
                 }
                 EditorTool::PlacePlayer => {
-                    commands.spawn(player(
-                        20.0,
-                        7000.0,
-                        &mut meshes,
-                        &mut materials,
-                    ));
+                    commands.spawn(player(20.0, 7000.0, &mut meshes, &mut materials));
                 }
                 EditorTool::Select => {
                     // TODO: Implement selection
-                }
-                // ... rest of the match cases ...
+                } // ... rest of the match cases ...
             }
         }
     }
