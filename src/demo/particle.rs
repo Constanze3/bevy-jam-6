@@ -8,7 +8,8 @@ use crate::{AppSystems, PausableSystems, asset_tracking::LoadResource};
 
 use super::player::Player;
 
-const PARTICLE_LOCAL_Z: f32 = 2.0;
+const PARTICLE_LOCAL_Z: f32 = -2.0;
+const ARROWS_LOCAL_Z: f32 = -3.0;
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<ParticleAssets>();
@@ -31,14 +32,18 @@ pub(super) fn plugin(app: &mut App) {
 #[reflect(Resource)]
 pub struct ParticleAssets {
     #[dependency]
-    arrow: Handle<Image>,
+    arrow_image: Handle<Image>,
+    arrow_offset: f32,
+    arrow_scale: f32,
 }
 
 impl FromWorld for ParticleAssets {
     fn from_world(world: &mut World) -> Self {
         let assets = world.resource::<AssetServer>();
         Self {
-            arrow: assets.load("images/arrow.png"),
+            arrow_image: assets.load("images/arrow.png"),
+            arrow_offset: 20.0,
+            arrow_scale: 0.02,
         }
     }
 }
@@ -53,6 +58,9 @@ pub struct Particle {
     pub material: Handle<ColorMaterial>,
 }
 
+#[derive(Component)]
+pub struct Arrows;
+
 pub fn particle_bundle(
     translation: Vec2,
     particle: Particle,
@@ -61,13 +69,14 @@ pub fn particle_bundle(
     let arrow_transforms = {
         let mut result = Vec::new();
         for sub_particle in particle.sub_particles.iter() {
-            let direction = sub_particle.initial_velocity;
+            let direction = sub_particle.initial_velocity.normalize();
             let angle = direction.y.atan2(direction.x);
+            let position = Vec2::ZERO + direction * particle_assets.arrow_offset;
 
             result.push(Transform {
-                translation: Vec2::ZERO.extend(1.0),
+                translation: position.extend(0.0),
                 rotation: Quat::from_rotation_z(angle),
-                scale: Vec3::ONE * 0.05,
+                scale: Vec3::ONE * particle_assets.arrow_scale,
             });
         }
 
@@ -75,31 +84,44 @@ pub fn particle_bundle(
     };
 
     (
-        Name::new("Particle"),
-        Mesh2d(particle.mesh.clone()),
-        MeshMaterial2d(particle.material.clone()),
-        Transform::from_translation(translation.extend(PARTICLE_LOCAL_Z)),
-        Children::spawn(SpawnWith({
-            let arrow = particle_assets.arrow.clone();
+        Name::new("Particle Bundle"),
+        Transform::default(),
+        Visibility::default(),
+        children![
+            (
+                Name::new("Arrows"),
+                Transform::from_translation(translation.extend(ARROWS_LOCAL_Z)),
+                Visibility::default(),
+                Children::spawn(SpawnWith({
+                    let arrow = particle_assets.arrow_image.clone();
 
-            move |parent: &mut RelatedSpawner<ChildOf>| {
-                for transform in arrow_transforms {
-                    parent.spawn((
-                        Name::new("Arrow"),
-                        Sprite::from_image(arrow.clone()),
-                        transform,
-                    ));
-                }
-            }
-        })),
-        RigidBody::Dynamic,
-        Collider::ball(particle.radius),
-        ActiveEvents::COLLISION_EVENTS,
-        Velocity {
-            linvel: particle.initial_velocity,
-            angvel: 0.0,
-        },
-        particle,
+                    move |parent: &mut RelatedSpawner<ChildOf>| {
+                        for transform in arrow_transforms {
+                            parent.spawn((
+                                Name::new("Arrow"),
+                                Sprite::from_image(arrow.clone()),
+                                transform,
+                            ));
+                        }
+                    }
+                })),
+                Arrows,
+            ),
+            (
+                Name::new("Particle"),
+                Transform::from_translation(translation.extend(PARTICLE_LOCAL_Z)),
+                Mesh2d(particle.mesh.clone()),
+                MeshMaterial2d(particle.material.clone()),
+                RigidBody::Dynamic,
+                Collider::ball(particle.radius),
+                ActiveEvents::COLLISION_EVENTS,
+                Velocity {
+                    linvel: particle.initial_velocity,
+                    angvel: 0.0,
+                },
+                particle,
+            )
+        ],
     )
 }
 
@@ -119,7 +141,7 @@ pub struct ParticleParticleCollisionEvent {
 // System that triggers specialized collision events.
 fn particle_collision_handler(
     mut collision_events: EventReader<CollisionEvent>,
-    query: Query<(Option<&Particle>, Option<&Player>)>,
+    query: Query<(Option<&Particle>, Option<&Player>), With<RigidBody>>,
     mut commands: Commands,
 ) {
     for event in collision_events.read() {
@@ -127,8 +149,13 @@ fn particle_collision_handler(
             return;
         };
 
-        let (e1_particle, e1_player) = query.get(e1).unwrap();
-        let (e2_particle, e2_player) = query.get(e2).unwrap();
+        let Ok((e1_particle, e1_player)) = query.get(e1) else {
+            return;
+        };
+
+        let Ok((e2_particle, e2_player)) = query.get(e2) else {
+            return;
+        };
 
         if e1_player.is_some() && e2_particle.is_some() {
             commands.trigger(PlayerParticleCollisionEvent {
@@ -158,7 +185,7 @@ fn particle_collision_handler(
 
 fn player_particle_collision(
     trigger: Trigger<PlayerParticleCollisionEvent>,
-    mut particle_query: Query<(&Transform, &mut Particle)>,
+    mut particle_query: Query<(&ChildOf, &Transform, &mut Particle)>,
     mut commands: Commands,
     particle_assets: Res<ParticleAssets>,
 ) {
@@ -172,7 +199,7 @@ fn player_particle_collision(
 
 fn particle_particle_collision(
     trigger: Trigger<ParticleParticleCollisionEvent>,
-    mut particle_query: Query<(&Transform, &mut Particle)>,
+    mut particle_query: Query<(&ChildOf, &Transform, &mut Particle)>,
     mut commands: Commands,
     particle_assets: Res<ParticleAssets>,
 ) {
@@ -193,11 +220,11 @@ fn particle_particle_collision(
 
 fn split_particle(
     entity: Entity,
-    particle_query: &mut Query<(&Transform, &mut Particle)>,
+    particle_query: &mut Query<(&ChildOf, &Transform, &mut Particle)>,
     commands: &mut Commands,
     particle_assets: &ParticleAssets,
 ) {
-    let (transform, mut particle) = particle_query.get_mut(entity).unwrap();
+    let (bundle, transform, mut particle) = particle_query.get_mut(entity).unwrap();
 
     let position = transform.translation;
 
@@ -214,5 +241,5 @@ fn split_particle(
         ));
     }
 
-    commands.entity(entity).despawn();
+    commands.entity(bundle.0).despawn();
 }
