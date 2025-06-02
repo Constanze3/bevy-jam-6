@@ -1,10 +1,12 @@
+use std::time::Duration;
+
 use bevy::{
     ecs::{relationship::RelatedSpawner, spawn::SpawnWith},
     prelude::*,
 };
 use bevy_rapier2d::prelude::*;
 
-use crate::{AppSystems, PausableSystems, asset_tracking::LoadResource};
+use crate::{AppSystems, PausableSystems, asset_tracking::LoadResource, screens::Screen};
 
 use super::player::Player;
 
@@ -26,6 +28,20 @@ pub(super) fn plugin(app: &mut App) {
 
     app.add_observer(player_particle_collision);
     app.add_observer(particle_particle_collision);
+    app.add_observer(split_particle);
+
+    // invincibility
+    app.add_systems(
+        Update,
+        (
+            setup_invincibility
+                .in_set(AppSystems::Update)
+                .run_if(in_state(Screen::Gameplay)),
+            tick_invincibility
+                .in_set(AppSystems::Update)
+                .in_set(PausableSystems),
+        ),
+    );
 }
 
 #[derive(Resource, Asset, Clone, Reflect)]
@@ -35,15 +51,27 @@ pub struct ParticleAssets {
     arrow_image: Handle<Image>,
     arrow_offset: f32,
     arrow_scale: f32,
+    invincibility_duration: Duration,
+    invincible_material: Handle<ColorMaterial>,
 }
 
 impl FromWorld for ParticleAssets {
     fn from_world(world: &mut World) -> Self {
         let assets = world.resource::<AssetServer>();
+
+        let arrow_image = assets.load("images/arrow.png");
+
+        let mut materials = world.resource_mut::<Assets<ColorMaterial>>();
+        let invincible_material = materials.add(ColorMaterial::from_color(Color::Srgba(
+            Srgba::hex("f7bd1d").unwrap(),
+        )));
+
         Self {
-            arrow_image: assets.load("images/arrow.png"),
+            arrow_image,
             arrow_offset: 20.0,
             arrow_scale: 0.02,
+            invincibility_duration: Duration::from_secs_f32(0.5),
+            invincible_material,
         }
     }
 }
@@ -56,6 +84,15 @@ pub struct Particle {
     pub sub_particles: Vec<Particle>,
     pub mesh: Handle<Mesh>,
     pub material: Handle<ColorMaterial>,
+}
+
+#[derive(Component)]
+pub struct Invincible(Timer);
+
+impl Invincible {
+    fn new(duration: Duration) -> Self {
+        Self(Timer::new(duration, TimerMode::Once))
+    }
 }
 
 #[derive(Component)]
@@ -120,22 +157,10 @@ pub fn particle_bundle(
                     angvel: 0.0,
                 },
                 particle,
+                Invincible::new(particle_assets.invincibility_duration)
             )
         ],
     )
-}
-
-#[derive(Event)]
-#[allow(dead_code)]
-pub struct PlayerParticleCollisionEvent {
-    pub player: Entity,
-    pub particle: Entity,
-}
-
-#[derive(Event)]
-pub struct ParticleParticleCollisionEvent {
-    pub particle1: Entity,
-    pub particle2: Entity,
 }
 
 // System that triggers specialized collision events.
@@ -183,63 +208,98 @@ fn particle_collision_handler(
     }
 }
 
+#[derive(Event)]
+#[allow(dead_code)]
+pub struct PlayerParticleCollisionEvent {
+    pub player: Entity,
+    pub particle: Entity,
+}
+
 fn player_particle_collision(
     trigger: Trigger<PlayerParticleCollisionEvent>,
-    mut particle_query: Query<(&ChildOf, &Transform, &mut Particle)>,
     mut commands: Commands,
-    particle_assets: Res<ParticleAssets>,
 ) {
-    split_particle(
-        trigger.particle,
-        &mut particle_query,
-        &mut commands,
-        particle_assets.as_ref(),
-    );
+    commands.trigger(ParticleSplitEvent(trigger.particle));
+}
+
+#[derive(Event)]
+pub struct ParticleParticleCollisionEvent {
+    pub particle1: Entity,
+    pub particle2: Entity,
 }
 
 fn particle_particle_collision(
     trigger: Trigger<ParticleParticleCollisionEvent>,
-    mut particle_query: Query<(&ChildOf, &Transform, &mut Particle)>,
+    mut commands: Commands,
+) {
+    commands.trigger(ParticleSplitEvent(trigger.particle1));
+    commands.trigger(ParticleSplitEvent(trigger.particle2));
+}
+
+#[derive(Event)]
+pub struct ParticleSplitEvent(pub Entity);
+
+fn split_particle(
+    trigger: Trigger<ParticleSplitEvent>,
+    mut particle_query: Query<
+        (Option<&Invincible>, &ChildOf, &Transform, &mut Particle),
+        Without<Player>,
+    >,
+    player_query: Query<&Player>,
     mut commands: Commands,
     particle_assets: Res<ParticleAssets>,
 ) {
-    split_particle(
-        trigger.particle1,
-        &mut particle_query,
-        &mut commands,
-        particle_assets.as_ref(),
-    );
+    let (invincible, bundle, transform, mut particle) = particle_query.get_mut(trigger.0).unwrap();
 
-    split_particle(
-        trigger.particle2,
-        &mut particle_query,
-        &mut commands,
-        particle_assets.as_ref(),
-    );
-}
+    if invincible.is_some() {
+        return;
+    }
 
-fn split_particle(
-    entity: Entity,
-    particle_query: &mut Query<(&ChildOf, &Transform, &mut Particle)>,
-    commands: &mut Commands,
-    particle_assets: &ParticleAssets,
-) {
-    let (bundle, transform, mut particle) = particle_query.get_mut(entity).unwrap();
+    let player = player_query.single().unwrap();
 
     let position = transform.translation;
 
     let sub_particles = std::mem::take(&mut particle.sub_particles);
     for sub_particle in sub_particles {
-        let offset =
-            sub_particle.initial_velocity.normalize() * (particle.radius + sub_particle.radius);
+        let offset_distance = particle.radius + sub_particle.radius.max(player.radius);
+        let offset = sub_particle.initial_velocity.normalize() * offset_distance;
 
         let spawn_position = position.xy() + offset;
         commands.spawn(particle_bundle(
             spawn_position,
             sub_particle,
-            particle_assets,
+            particle_assets.as_ref(),
         ));
     }
 
     commands.entity(bundle.0).despawn();
+}
+
+fn setup_invincibility(
+    mut query: Query<&mut MeshMaterial2d<ColorMaterial>, Added<Invincible>>,
+    particle_assets: Res<ParticleAssets>,
+) {
+    for mut material in query.iter_mut() {
+        material.0 = particle_assets.invincible_material.clone();
+    }
+}
+
+fn tick_invincibility(
+    time: Res<Time>,
+    mut query: Query<(
+        Entity,
+        &mut Invincible,
+        &Particle,
+        &mut MeshMaterial2d<ColorMaterial>,
+    )>,
+    mut commands: Commands,
+) {
+    for (entity, mut invincible, particle, mut material) in query.iter_mut() {
+        invincible.0.tick(time.delta());
+
+        if invincible.0.just_finished() {
+            commands.entity(entity).remove::<Invincible>();
+            material.0 = particle.material.clone();
+        }
+    }
 }
