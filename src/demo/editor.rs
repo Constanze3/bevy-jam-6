@@ -1,9 +1,10 @@
 use bevy::prelude::*;
 use bevy_inspector_egui::{bevy_egui::EguiContexts, egui::{self, debug_text::print}};
 
-use crate::Pause;
+use crate::{demo::particle::{self, particle_bundle, Particle}, Pause};
 
-use super::{atom::atom_seed, level::obstacle, player::player};
+use super::{level::obstacle, particle::ParticleAssets, player::player};
+// Removed atom::atom_seed import because the atom module does not exist or is not accessible.
 
 #[derive(States, Debug, Clone, Copy, Eq, PartialEq, Hash, Default)]
 pub enum EditorState {
@@ -118,6 +119,7 @@ fn handle_editor_input(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut contexts: EguiContexts,
+    particle_assets: Res<ParticleAssets>,
 ) {
     let ctx = contexts.ctx_mut();
     if buttons.just_pressed(MouseButton::Left) && ctx.is_pointer_over_area() {
@@ -141,13 +143,36 @@ fn handle_editor_input(
             println!("Editor tool selected: {:?}", editor_settings.selected_tool); // Debug print
             match editor_settings.selected_tool {
                 EditorTool::PlaceAtom => {
-                    println!("Spawning atom at: {:?}", world_position); // Debug print
-                    commands.spawn(atom_seed(
-                        world_position,
-                        editor_settings.atom_radius,
-                        &mut meshes,
-                        &mut materials,
-                    ));
+                    println!("Spawning atom at: {:?}", world_position);
+                    let particle_mesh = meshes.add(Circle::new(editor_settings.atom_radius));
+    let particle_material = materials.add(Color::Srgba(Srgba::hex("0f95e2").unwrap()));
+// Debug print
+                    commands.spawn(particle_bundle(
+                vec2(-100.0, 0.0),
+                Particle {
+                    radius: editor_settings.atom_radius,
+                    initial_velocity: Vec2::ZERO,
+                    sub_particles: vec![
+                        Particle {
+                            radius: editor_settings.atom_radius,
+                            initial_velocity: vec2(0.0, -200.0),
+                            sub_particles: vec![],
+                            mesh: particle_mesh.clone(),
+                            material: particle_material.clone()
+                        },
+                        Particle {
+                            radius: editor_settings.atom_radius,
+                            initial_velocity: vec2(0.0, 200.0),
+                            sub_particles: vec![],
+                            mesh: particle_mesh.clone(),
+                            material: particle_material.clone()
+                        }
+                    ],
+                    mesh: particle_mesh.clone(),
+                    material: particle_material.clone()
+                },
+                particle_assets.as_ref()
+            ));
                 }
                 EditorTool::PlaceObstacle => {
                     commands.spawn(obstacle(
