@@ -5,7 +5,7 @@ use bevy_rapier2d::prelude::{Collider, RigidBody};
 
 use crate::{asset_tracking::LoadResource, demo::player::player, screens::Screen};
 
-use super::indicator::drag_indicator;
+use super::{atom::{atom, atom_part}, indicator::drag_indicator};
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<LevelAssets>();
@@ -34,6 +34,11 @@ pub fn spawn_level(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
+    let atom_radius = 50.0;
+    let num_parts = 6;
+    let part_radius = 10.0;
+    let angle_step = std::f32::consts::TAU / num_parts as f32;
+
     commands.spawn((
         Name::new("Level"),
         Transform::default(),
@@ -49,6 +54,17 @@ pub fn spawn_level(
                 &mut materials
             ),
             obstacle(Vec2 { x: 100.0, y: 0.0 }, 50.0, &mut meshes, &mut materials),
+            (
+                atom(atom_radius, num_parts, part_radius, &mut meshes, &mut materials),
+                children![
+                    atom_part(0.0 * angle_step, atom_radius, part_radius, &mut meshes, &mut materials),
+                    atom_part(1.0 * angle_step, atom_radius, part_radius, &mut meshes, &mut materials),
+                    atom_part(2.0 * angle_step, atom_radius, part_radius, &mut meshes, &mut materials),
+                    atom_part(3.0 * angle_step, atom_radius, part_radius, &mut meshes, &mut materials),
+                    atom_part(4.0 * angle_step, atom_radius, part_radius, &mut meshes, &mut materials),
+                    atom_part(5.0 * angle_step, atom_radius, part_radius, &mut meshes, &mut materials),
+                ]
+            ),
         ],
     ));
 }
