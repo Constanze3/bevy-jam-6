@@ -1,10 +1,13 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, ui::update};
 use bevy_inspector_egui::{
     bevy_egui::{EguiContextPass, EguiContexts},
     egui,
 };
 
-use crate::{demo::particle::{self, particle_bundle, Particle}, Pause};
+use crate::{
+    Pause,
+    demo::particle::{self, Particle, particle_bundle},
+};
 
 use super::{level::obstacle, particle::ParticleAssets, player::player};
 // Removed atom::atom_seed import because the atom module does not exist or is not accessible.
@@ -16,11 +19,25 @@ pub enum EditorState {
     Enabled,
 }
 
-#[derive(Resource, Default)]
+#[derive(Resource)]
 pub struct EditorSettings {
     selected_tool: EditorTool,
     atom_radius: f32,
+    atom_color: [f32; 3],
+    atom_velocity: f32,
     obstacle_size: f32,
+}
+
+impl Default for EditorSettings {
+    fn default() -> Self {
+        Self {
+            selected_tool: EditorTool::default(),
+            atom_radius: 30.0,
+            atom_color: [0.2, 0.7, 1.0],
+            atom_velocity: 200.0,
+            obstacle_size: 50.0,
+        }
+    }
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -32,14 +49,22 @@ enum EditorTool {
     PlacePlayer,
 }
 
+#[derive(Resource, Default)]
+pub struct PlacementState {
+    pub preview_entity: Option<Entity>,
+    pub placing: Option<EditorTool>,
+}
+
 pub(super) fn plugin(app: &mut App) {
     app.init_state::<EditorState>()
         .init_resource::<EditorSettings>()
+        .init_resource::<PlacementState>()
         .add_systems(
             EguiContextPass,
             (
                 toggle_editor,
                 editor_ui.run_if(in_state(EditorState::Enabled)),
+                update_placement_preview.run_if(in_state(EditorState::Enabled)),
             ),
         );
 
@@ -47,6 +72,105 @@ pub(super) fn plugin(app: &mut App) {
         Update,
         handle_editor_input.run_if(in_state(EditorState::Enabled)),
     );
+}
+
+fn update_placement_preview(
+    mut commands: Commands,
+    mut placement_state: ResMut<PlacementState>,
+    editor_settings: Res<EditorSettings>,
+    windows: Query<&Window>,
+    camera_q: Query<(&Camera, &GlobalTransform), With<Camera2d>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    particle_assets: Res<ParticleAssets>,
+) {
+    if let Some(tool) = placement_state.placing.as_ref() {
+        let (camera, camera_transform) = camera_q
+            .single()
+            .expect("Expected exactly one camera in the scene");
+        let window = windows
+            .single()
+            .expect("Expected exactly one window in the scene");
+
+        if let Some(cursor_pos) = window
+            .cursor_position()
+            .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor).ok())
+            .map(|ray| ray.origin.truncate())
+        {
+            // Spawn or move the preview entity
+            let entity = if let Some(entity) = placement_state.preview_entity {
+                // Move existing preview
+                commands
+                    .entity(entity)
+                    .insert(Transform::from_translation(cursor_pos.extend(10.0)));
+                entity
+            } else {
+                let particle_mesh = meshes.add(Circle::new(editor_settings.atom_radius));
+                let color = Color::srgb(
+                    editor_settings.atom_color[0],
+                    editor_settings.atom_color[1],
+                    editor_settings.atom_color[2],
+                );
+                let particle_material = materials.add(color);
+
+                // Spawn new preview
+                let entity = match tool {
+                    EditorTool::PlaceAtom => {
+                        let bundle = particle_bundle(
+                            vec2(-100.0, 0.0),
+                            Particle {
+                                radius: editor_settings.atom_radius,
+                                initial_velocity: Vec2::ZERO,
+                                sub_particles: vec![
+                                    Particle {
+                                        radius: editor_settings.atom_radius,
+                                        initial_velocity: vec2(0.0, -200.0),
+                                        sub_particles: vec![],
+                                        mesh: particle_mesh.clone(),
+                                        material: particle_material.clone(),
+                                    },
+                                    Particle {
+                                        radius: editor_settings.atom_radius,
+                                        initial_velocity: vec2(0.0, 200.0),
+                                        sub_particles: vec![],
+                                        mesh: particle_mesh.clone(),
+                                        material: particle_material.clone(),
+                                    },
+                                ],
+                                mesh: particle_mesh.clone(),
+                                material: particle_material.clone(),
+                            },
+                            particle_assets.as_ref(),
+                        );
+                        commands.spawn((bundle, Name::new("Preview"))).id()
+                    }
+                    EditorTool::PlaceObstacle => {
+                        let bundle = obstacle(
+                            cursor_pos,
+                            editor_settings.obstacle_size,
+                            &mut meshes,
+                            &mut materials,
+                        );
+                        commands.spawn((bundle, Name::new("Preview"))).id()
+                    }
+                    EditorTool::PlacePlayer => {
+                        let bundle = player(20.0, 7000.0, &mut meshes, &mut materials);
+                        commands.spawn((bundle, Name::new("Preview"))).id()
+                    }
+                    _ => return,
+                };
+                placement_state.preview_entity = Some(entity);
+                entity
+            };
+            // Make sure it's visible and at the right position
+            commands
+                .entity(entity)
+                .insert(Transform::from_translation(cursor_pos.extend(10.0)));
+        }
+    } else if let Some(entity) = placement_state.preview_entity.take() {
+        // Remove preview if not placing
+        commands.entity(entity).despawn();
+    }
 }
 
 fn toggle_editor(
@@ -112,6 +236,11 @@ fn editor_ui(mut contexts: EguiContexts, mut editor_settings: ResMut<EditorSetti
                         egui::Slider::new(&mut editor_settings.atom_radius, 10.0..=100.0)
                             .text("Atom Radius"),
                     );
+                    ui.color_edit_button_rgb(&mut editor_settings.atom_color);
+                    ui.add(
+                        egui::Slider::new(&mut editor_settings.atom_velocity, 0.0..=500.0)
+                            .text("Sub-Particle Velocity"),
+                    );
                 }
                 EditorTool::PlaceObstacle => {
                     ui.add(
@@ -172,36 +301,42 @@ fn handle_editor_input(
             println!("Editor tool selected: {:?}", editor_settings.selected_tool); // Debug print
             match editor_settings.selected_tool {
                 EditorTool::PlaceAtom => {
-                    println!("Spawning atom at: {:?}", world_position);
+                    println!("Spawning atom at: {:?}", world_position); // Debug print
                     let particle_mesh = meshes.add(Circle::new(editor_settings.atom_radius));
-    let particle_material = materials.add(Color::Srgba(Srgba::hex("0f95e2").unwrap()));
-// Debug print
-                    commands.spawn(particle_bundle(
-                vec2(-100.0, 0.0),
-                Particle {
-                    radius: editor_settings.atom_radius,
-                    initial_velocity: Vec2::ZERO,
-                    sub_particles: vec![
+                    let color = Color::srgb(
+                        editor_settings.atom_color[0],
+                        editor_settings.atom_color[1],
+                        editor_settings.atom_color[2],
+                    );
+                    let particle_material = materials.add(color);
+
+                    let bundle = particle_bundle(
+                        vec2(-100.0, 0.0),
                         Particle {
                             radius: editor_settings.atom_radius,
-                            initial_velocity: vec2(0.0, -200.0),
-                            sub_particles: vec![],
+                            initial_velocity: Vec2::ZERO,
+                            sub_particles: vec![
+                                Particle {
+                                    radius: editor_settings.atom_radius,
+                                    initial_velocity: vec2(0.0, -200.0),
+                                    sub_particles: vec![],
+                                    mesh: particle_mesh.clone(),
+                                    material: particle_material.clone(),
+                                },
+                                Particle {
+                                    radius: editor_settings.atom_radius,
+                                    initial_velocity: vec2(0.0, 200.0),
+                                    sub_particles: vec![],
+                                    mesh: particle_mesh.clone(),
+                                    material: particle_material.clone(),
+                                },
+                            ],
                             mesh: particle_mesh.clone(),
-                            material: particle_material.clone()
+                            material: particle_material.clone(),
                         },
-                        Particle {
-                            radius: editor_settings.atom_radius,
-                            initial_velocity: vec2(0.0, 200.0),
-                            sub_particles: vec![],
-                            mesh: particle_mesh.clone(),
-                            material: particle_material.clone()
-                        }
-                    ],
-                    mesh: particle_mesh.clone(),
-                    material: particle_material.clone()
-                },
-                particle_assets.as_ref()
-            ));
+                        particle_assets.as_ref(),
+                    );
+                    commands.spawn((bundle, Name::new("Preview"))).id();
                 }
                 EditorTool::PlaceObstacle => {
                     commands.spawn(obstacle(
