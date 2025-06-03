@@ -5,13 +5,13 @@
 
 use bevy::prelude::*;
 
+pub mod editor;
 mod indicator;
 mod input;
 pub mod level;
 mod movement;
 mod particle;
 pub mod player;
-pub mod editor;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((
