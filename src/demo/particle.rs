@@ -83,7 +83,7 @@ impl FromWorld for ParticleAssets {
 pub struct Particle {
     pub radius: f32,
     pub initial_velocity: Vec2,
-    pub sub_particles: Vec<Particle>,
+    pub subparticles: Vec<Particle>,
     pub mesh: Handle<Mesh>,
     pub material: Handle<ColorMaterial>,
 }
@@ -107,7 +107,7 @@ pub fn particle_bundle(
 ) -> impl Bundle {
     let arrow_transforms = {
         let mut result = Vec::new();
-        for sub_particle in particle.sub_particles.iter() {
+        for sub_particle in particle.subparticles.iter() {
             let direction = sub_particle.initial_velocity.normalize();
             let angle = direction.y.atan2(direction.x);
 
@@ -252,11 +252,13 @@ fn split_particle(
         (Option<&Invincible>, &ChildOf, &Transform, &mut Particle),
         Without<Player>,
     >,
+    parent_query: Query<&ChildOf, (Without<Player>, Without<Particle>)>,
     player_query: Query<&Player>,
     mut commands: Commands,
     particle_assets: Res<ParticleAssets>,
 ) {
     let (invincible, bundle, transform, mut particle) = particle_query.get_mut(trigger.0).unwrap();
+    let bundle = bundle.0;
 
     if invincible.is_some() {
         return;
@@ -265,21 +267,22 @@ fn split_particle(
     let player = player_query.single().unwrap();
 
     let position = transform.translation;
+    let parent = parent_query.get(bundle).unwrap().0;
 
-    let sub_particles = std::mem::take(&mut particle.sub_particles);
+    let sub_particles = std::mem::take(&mut particle.subparticles);
     for sub_particle in sub_particles {
         let offset_distance = particle.radius + 2.0 * player.radius + sub_particle.radius;
         let offset = sub_particle.initial_velocity.normalize() * offset_distance;
 
         let spawn_position = position.xy() + offset;
-        commands.spawn(particle_bundle(
-            spawn_position,
-            sub_particle,
-            particle_assets.as_ref(),
+        commands.spawn((
+            particle_bundle(spawn_position, sub_particle, particle_assets.as_ref()),
+            // the subparticle is spawned as a child of the superparticles parent
+            ChildOf(parent),
         ));
     }
 
-    commands.entity(bundle.0).despawn();
+    commands.entity(bundle).despawn();
 }
 
 fn setup_invincibility(

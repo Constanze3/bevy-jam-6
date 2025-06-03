@@ -75,18 +75,18 @@ pub fn spawn_level(
                 Particle {
                     radius: particle_radius,
                     initial_velocity: Vec2::ZERO,
-                    sub_particles: vec![
+                    subparticles: vec![
                         Particle {
                             radius: particle_radius2,
                             initial_velocity: vec2(0.0, -200.0),
-                            sub_particles: vec![],
+                            subparticles: vec![],
                             mesh: particle_mesh2.clone(),
                             material: particle_material.clone()
                         },
                         Particle {
                             radius: particle_radius2,
                             initial_velocity: vec2(0.0, 200.0),
-                            sub_particles: vec![],
+                            subparticles: vec![],
                             mesh: particle_mesh2.clone(),
                             material: particle_material.clone()
                         }

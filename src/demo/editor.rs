@@ -121,18 +121,18 @@ fn update_placement_preview(
                             Particle {
                                 radius: editor_settings.atom_radius,
                                 initial_velocity: Vec2::ZERO,
-                                sub_particles: vec![
+                                subparticles: vec![
                                     Particle {
                                         radius: editor_settings.atom_radius,
                                         initial_velocity: vec2(0.0, -200.0),
-                                        sub_particles: vec![],
+                                        subparticles: vec![],
                                         mesh: particle_mesh.clone(),
                                         material: particle_material.clone(),
                                     },
                                     Particle {
                                         radius: editor_settings.atom_radius,
                                         initial_velocity: vec2(0.0, 200.0),
-                                        sub_particles: vec![],
+                                        subparticles: vec![],
                                         mesh: particle_mesh.clone(),
                                         material: particle_material.clone(),
                                     },
@@ -315,18 +315,18 @@ fn handle_editor_input(
                         Particle {
                             radius: editor_settings.atom_radius,
                             initial_velocity: Vec2::ZERO,
-                            sub_particles: vec![
+                            subparticles: vec![
                                 Particle {
                                     radius: editor_settings.atom_radius,
                                     initial_velocity: vec2(0.0, -200.0),
-                                    sub_particles: vec![],
+                                    subparticles: vec![],
                                     mesh: particle_mesh.clone(),
                                     material: particle_material.clone(),
                                 },
                                 Particle {
                                     radius: editor_settings.atom_radius,
                                     initial_velocity: vec2(0.0, 200.0),
-                                    sub_particles: vec![],
+                                    subparticles: vec![],
                                     mesh: particle_mesh.clone(),
                                     material: particle_material.clone(),
                                 },
