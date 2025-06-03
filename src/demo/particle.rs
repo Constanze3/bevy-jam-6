@@ -261,7 +261,7 @@ fn split_particle(
 
     let sub_particles = std::mem::take(&mut particle.sub_particles);
     for sub_particle in sub_particles {
-        let offset_distance = particle.radius + sub_particle.radius.max(player.radius);
+        let offset_distance = particle.radius + 2.0 * player.radius + sub_particle.radius;
         let offset = sub_particle.initial_velocity.normalize() * offset_distance;
 
         let spawn_position = position.xy() + offset;

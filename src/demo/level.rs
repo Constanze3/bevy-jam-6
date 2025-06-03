@@ -52,6 +52,9 @@ pub fn spawn_level(
     let particle_mesh = meshes.add(Circle::new(particle_radius));
     let particle_material = materials.add(Color::Srgba(Srgba::hex("0f95e2").unwrap()));
 
+    let particle_radius2 = 40.0;
+    let particle_mesh2 = meshes.add(Circle::new(particle_radius2));
+
     commands.spawn((
         Name::new("Level"),
         Transform::default(),
@@ -74,17 +77,17 @@ pub fn spawn_level(
                     initial_velocity: Vec2::ZERO,
                     sub_particles: vec![
                         Particle {
-                            radius: particle_radius,
+                            radius: particle_radius2,
                             initial_velocity: vec2(0.0, -200.0),
                             sub_particles: vec![],
-                            mesh: particle_mesh.clone(),
+                            mesh: particle_mesh2.clone(),
                             material: particle_material.clone()
                         },
                         Particle {
-                            radius: particle_radius,
+                            radius: particle_radius2,
                             initial_velocity: vec2(0.0, 200.0),
                             sub_particles: vec![],
-                            mesh: particle_mesh.clone(),
+                            mesh: particle_mesh2.clone(),
                             material: particle_material.clone()
                         }
                     ],
