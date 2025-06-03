@@ -48,7 +48,7 @@ pub fn spawn_level(
     // Spawn screen bounds first
     spawn_screen_bounds(&mut commands, window);
 
-    let particle_radius = 15.0;
+    let particle_radius = 50.0;
     let particle_mesh = meshes.add(Circle::new(particle_radius));
     let particle_material = materials.add(Color::Srgba(Srgba::hex("0f95e2").unwrap()));
 
