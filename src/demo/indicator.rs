@@ -49,7 +49,7 @@ pub struct DragIndicator {
 
 fn update_drag_indicator(
     input_controller: Res<InputController>,
-    player_query: Query<&Transform, With<Player>>,
+    player_query: Query<(&Player, &Transform)>,
     mut indicator_query: Query<
         (&mut DragIndicator, &mut Transform, &mut Visibility),
         Without<Player>,
@@ -61,9 +61,15 @@ fn update_drag_indicator(
             break 'blk false;
         };
 
-        let Ok(player_transform) = player_query.single() else {
+        if player_query.is_empty() {
             break 'blk false;
-        };
+        }
+
+        let (player, player_transform) = player_query.single().unwrap();
+
+        if !player.can_move {
+            break 'blk false;
+        }
 
         for (indicator, mut indicator_transform, mut indicator_visibility) in
             indicator_query.iter_mut()
@@ -98,9 +104,7 @@ fn update_drag_indicator(
     };
 
     if !success {
-        for (_, _, mut indicator_visibility) in indicator_query.iter_mut() {
-            *indicator_visibility = Visibility::Hidden;
-        }
+        hide_drag_indicator(indicator_query.transmute_lens_filtered().query());
     }
 }
 

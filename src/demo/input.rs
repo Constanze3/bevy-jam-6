@@ -1,4 +1,4 @@
-use crate::{AppSystems, PausableSystems, Pause};
+use crate::{AppSystems, PausableSystems, Pause, screens::Screen};
 use bevy::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
@@ -10,6 +10,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         record_input
+            .run_if(in_state(Screen::Gameplay))
             .in_set(AppSystems::RecordInput)
             .in_set(PausableSystems),
     );

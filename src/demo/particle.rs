@@ -11,7 +11,7 @@ use crate::{
     screens::Screen,
 };
 
-use super::player::Player;
+use super::player::{Player, TimeSpeed};
 
 const PARTICLE_LOCAL_Z: f32 = -2.0;
 const ARROWS_LOCAL_Z: f32 = -3.0;
@@ -193,18 +193,12 @@ fn particle_collision_handler(
         };
 
         if e1_player.is_some() && e2_particle.is_some() {
-            commands.trigger(PlayerParticleCollisionEvent {
-                player: e1,
-                particle: e2,
-            });
+            commands.trigger(PlayerParticleCollisionEvent { particle: e2 });
             return;
         }
 
         if e2_player.is_some() && e1_particle.is_some() {
-            commands.trigger(PlayerParticleCollisionEvent {
-                player: e2,
-                particle: e1,
-            });
+            commands.trigger(PlayerParticleCollisionEvent { particle: e1 });
             return;
         }
 
@@ -219,16 +213,27 @@ fn particle_collision_handler(
 }
 
 #[derive(Event)]
-#[allow(dead_code)]
 pub struct PlayerParticleCollisionEvent {
-    pub player: Entity,
     pub particle: Entity,
 }
 
+#[allow(unused)]
 fn player_particle_collision(
     trigger: Trigger<PlayerParticleCollisionEvent>,
+    mut player_query: Query<(&mut Player, &mut Velocity)>,
+    mut timestep_mode: ResMut<TimestepMode>,
+    time_speed: Res<TimeSpeed>,
     mut commands: Commands,
 ) {
+    let (mut player, mut velocity) = player_query.single_mut().unwrap();
+    player.can_move = true;
+
+    // velocity.linvel = Vec2::ZERO;
+
+    if let TimestepMode::Variable { time_scale, .. } = timestep_mode.as_mut() {
+        *time_scale = time_speed.slow;
+    }
+
     commands.trigger(ParticleSplitEvent(trigger.particle));
 }
 
