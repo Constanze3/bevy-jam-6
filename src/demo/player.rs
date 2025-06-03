@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
 use super::input::InputEvent;
-use crate::{AppSystems, PausableSystems, demo::movement::ScreenWrap};
+use crate::{AppSystems, PausableSystems};
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<Player>();
@@ -65,7 +65,6 @@ pub fn player(
         ActiveCollisionTypes::default() | ActiveCollisionTypes::DYNAMIC_DYNAMIC,
         Velocity::default(),
         ExternalImpulse::default(),
-        ScreenWrap,
     )
 }
 

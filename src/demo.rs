@@ -9,14 +9,12 @@ pub mod editor;
 mod indicator;
 mod input;
 pub mod level;
-mod movement;
 mod particle;
 pub mod player;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((
         level::plugin,
-        movement::plugin,
         player::plugin,
         input::plugin,
         indicator::plugin,
