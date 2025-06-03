@@ -6,7 +6,10 @@ use bevy::{
 };
 use bevy_rapier2d::prelude::*;
 
-use crate::{AppSystems, PausableSystems, asset_tracking::LoadResource, screens::Screen};
+use crate::{
+    AppSystems, PausableSystems, asset_tracking::LoadResource, external::maybe::Maybe,
+    screens::Screen,
+};
 
 use super::player::Player;
 
@@ -252,7 +255,7 @@ fn split_particle(
         (Option<&Invincible>, &ChildOf, &Transform, &mut Particle),
         Without<Player>,
     >,
-    parent_query: Query<&ChildOf, (Without<Player>, Without<Particle>)>,
+    parent_query: Query<Option<&ChildOf>, (Without<Player>, Without<Particle>)>,
     player_query: Query<&Player>,
     mut commands: Commands,
     particle_assets: Res<ParticleAssets>,
@@ -267,7 +270,7 @@ fn split_particle(
     let player = player_query.single().unwrap();
 
     let position = transform.translation;
-    let parent = parent_query.get(bundle).unwrap().0;
+    let parent = parent_query.get(bundle).unwrap();
 
     let sub_particles = std::mem::take(&mut particle.subparticles);
     for sub_particle in sub_particles {
@@ -277,8 +280,14 @@ fn split_particle(
         let spawn_position = position.xy() + offset;
         commands.spawn((
             particle_bundle(spawn_position, sub_particle, particle_assets.as_ref()),
-            // the subparticle is spawned as a child of the superparticles parent
-            ChildOf(parent),
+            // The subparticle will have the same parent as the particle if it has a parent.
+            Maybe({
+                if let Some(parent) = parent {
+                    Some(ChildOf(parent.0))
+                } else {
+                    None
+                }
+            }),
         ));
     }
 

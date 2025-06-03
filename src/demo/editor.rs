@@ -142,7 +142,7 @@ fn update_placement_preview(
                             },
                             particle_assets.as_ref(),
                         );
-                        commands.spawn((bundle, Name::new("Preview"))).id()
+                        commands.spawn(bundle).id()
                     }
                     EditorTool::PlaceObstacle => {
                         let bundle = obstacle(
@@ -336,7 +336,7 @@ fn handle_editor_input(
                         },
                         particle_assets.as_ref(),
                     );
-                    commands.spawn((bundle, Name::new("Preview"))).id();
+                    commands.spawn(bundle);
                 }
                 EditorTool::PlaceObstacle => {
                     commands.spawn(obstacle(

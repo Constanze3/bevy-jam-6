@@ -8,6 +8,7 @@ mod audio;
 mod demo;
 #[cfg(feature = "dev")]
 mod dev_tools;
+mod external;
 mod menus;
 mod screens;
 mod theme;
