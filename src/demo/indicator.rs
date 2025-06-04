@@ -4,7 +4,7 @@ use bevy_rapier2d::plugin::PhysicsSet;
 
 use crate::{PausableSystems, Pause};
 
-use super::input::{self, InputController};
+use super::input::InputController;
 use super::player::Player;
 
 pub(super) fn plugin(app: &mut App) {

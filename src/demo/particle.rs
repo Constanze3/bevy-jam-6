@@ -357,13 +357,7 @@ fn split_particle(
         commands.spawn((
             particle_bundle(spawn_position, true, sub_particle, particle_assets.as_ref()),
             // The subparticle will have the same parent as the particle if it has a parent.
-            Maybe({
-                if let Some(parent) = parent {
-                    Some(ChildOf(parent.0))
-                } else {
-                    None
-                }
-            }),
+            Maybe(parent.map(|parent| ChildOf(parent.0))),
         ));
     }
 

@@ -1,4 +1,4 @@
-use bevy::{prelude::*, ui::update};
+use bevy::prelude::*;
 use bevy_inspector_egui::{
     bevy_egui::{EguiContextPass, EguiContexts},
     egui,
@@ -6,7 +6,7 @@ use bevy_inspector_egui::{
 
 use crate::{
     Pause,
-    demo::particle::{self, Particle, particle_bundle},
+    demo::particle::{Particle, particle_bundle},
 };
 
 use super::{level::obstacle, particle::ParticleAssets, player::player};
@@ -41,7 +41,7 @@ impl Default for EditorSettings {
 }
 
 #[derive(Debug, Default, PartialEq)]
-enum EditorTool {
+pub enum EditorTool {
     #[default]
     Select,
     PlaceAtom,
@@ -183,12 +183,12 @@ fn toggle_editor(
     if input.just_pressed(KeyCode::Tab) {
         match state.get() {
             EditorState::Disabled => {
-                print!("Enabling editor mode\n"); // Debug print
+                println!("Enabling editor mode"); // Debug print
                 editor_state.set(EditorState::Enabled);
                 pause_state.set(Pause(true)); // Pause the game when editor is enabled
             }
             EditorState::Enabled => {
-                print!("Disabling editor mode\n"); // Debug print
+                println!("Disabling editor mode"); // Debug print
                 editor_state.set(EditorState::Disabled);
                 pause_state.set(Pause(false)); // Unpause when editor is disabled
             }
