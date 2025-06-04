@@ -87,6 +87,7 @@ pub fn spawn_level(
                 6.0,
                 0.4,
                 Color::hsl(0.0, 0.0, 0.6),
+                Color::Srgba(Srgba::hex("7aad81").unwrap()),
                 &mut meshes,
                 &mut materials
             ),

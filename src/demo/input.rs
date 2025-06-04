@@ -18,11 +18,24 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Pause(true)), reset_input);
 }
 
-#[derive(Resource, Reflect, Default)]
+#[derive(Resource, Reflect)]
 #[reflect(Resource)]
 pub struct InputController {
     pub initial_position: Option<Vec2>,
     pub vector: Option<Vec2>,
+    pub min_length: f32,
+    pub max_length: f32,
+}
+
+impl Default for InputController {
+    fn default() -> Self {
+        Self {
+            initial_position: None,
+            vector: None,
+            min_length: 100.0,
+            max_length: 200.0,
+        }
+    }
 }
 
 #[derive(Event)]
@@ -45,8 +58,17 @@ fn record_input(
 
     // Update vector of input controller.
     if input.pressed(MouseButton::Left) {
-        input_controller.vector =
-            calculate_vector(input_controller.initial_position, window.cursor_position());
+        let vector = calculate_vector(input_controller.initial_position, window.cursor_position());
+
+        let vector = vector.map(|v| {
+            if input_controller.max_length < v.length() {
+                v.normalize() * input_controller.max_length
+            } else {
+                v
+            }
+        });
+
+        input_controller.vector = vector;
     }
 
     // Send input event.
@@ -54,7 +76,9 @@ fn record_input(
         let vector = calculate_vector(input_controller.initial_position, window.cursor_position());
 
         if let Some(vector) = vector {
-            events.write(InputEvent { vector });
+            if input_controller.min_length <= vector.length() {
+                events.write(InputEvent { vector });
+            }
         }
 
         input_controller.initial_position = None;
