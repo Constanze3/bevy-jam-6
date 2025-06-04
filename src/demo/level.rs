@@ -4,7 +4,7 @@ use bevy::{
     prelude::*,
     window::{PrimaryWindow, WindowResized},
 };
-use bevy_rapier2d::prelude::{Collider, Restitution, RigidBody};
+use bevy_rapier2d::prelude::*;
 
 use crate::{
     AppSystems, PausableSystems, asset_tracking::LoadResource, demo::player::player,
