@@ -20,7 +20,6 @@ use bevy::ecs::{
 /// use bevy_ecs::prelude::*;
 /// use bevy_ecs::system::RunSystemOnce;
 /// use i_cant_believe_its_not_bsn::Maybe;
-
 /// #[derive(Component)]
 /// struct A;
 ///
@@ -38,7 +37,6 @@ use bevy::ecs::{
 ///         })
 ///         .id()
 /// });
-
 /// let entity_ref = world.get_entity(entity_with_component).unwrap();
 /// assert!(entity_ref.contains::<A>());
 /// assert!(!entity_ref.contains::<Maybe<A>>());
@@ -50,14 +48,11 @@ use bevy::ecs::{
 ///         })
 ///         .id()
 /// });
-
 /// let entity_ref = world.get_entity(entity_without_component).unwrap();
 /// assert!(!entity_ref.contains::<A>());
 /// assert!(!entity_ref.contains::<Maybe<A>>());
 /// ```
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-
 pub struct Maybe<B: Bundle>(pub Option<B>);
 
 impl<B: Bundle> Component for Maybe<B> {
@@ -88,7 +83,6 @@ impl<B: Bundle> Maybe<B> {
 
 impl<B: Bundle> Default for Maybe<B> {
     /// Defaults to [`Maybe::NONE`].
-
     fn default() -> Self {
         Self::NONE
     }

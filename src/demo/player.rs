@@ -1,4 +1,17 @@
 //! Player-specific behavior.
+//!
+//! Collision groups are set up as follows:
+//!
+//! group_1 = terrain
+//! group_2 = player & invincible particles
+//! group_3 = normal particles
+//!
+//! Terrain collides with everything so technically they can also be on all groups (default value).
+//!
+//! group_2 collides with group_1 and group_2.
+//! group_3 collides only with group_1.
+//!
+//! The player and the particles have a group_3 sensor.
 
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
@@ -53,18 +66,27 @@ pub fn player(
             force_scalar,
             can_move: true,
         },
-        Mesh2d(mesh),
-        MeshMaterial2d(material),
-        Transform::default(),
-        RigidBody::Dynamic,
-        Ccd::enabled(),
-        Sleeping::disabled(),
-        Collider::ball(radius),
-        Restitution::coefficient(0.5),
-        ActiveEvents::COLLISION_EVENTS,
-        ActiveCollisionTypes::default() | ActiveCollisionTypes::DYNAMIC_DYNAMIC,
-        Velocity::default(),
-        ExternalImpulse::default(),
+        (
+            Mesh2d(mesh),
+            MeshMaterial2d(material),
+            Transform::default(),
+            RigidBody::Dynamic,
+            Ccd::enabled(),
+            Sleeping::disabled(),
+            Collider::ball(radius),
+            children![(
+                Name::new("Player Sensor"),
+                ActiveEvents::COLLISION_EVENTS,
+                CollisionGroups::new(Group::GROUP_3, Group::GROUP_3),
+                Collider::ball(radius),
+                Sensor
+            )],
+            CollisionGroups::new(Group::GROUP_2, Group::GROUP_1 | Group::GROUP_2),
+            Restitution::coefficient(0.5),
+            ActiveEvents::COLLISION_EVENTS,
+            Velocity::default(),
+            ExternalImpulse::default(),
+        ),
     )
 }
 

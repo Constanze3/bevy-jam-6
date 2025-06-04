@@ -33,7 +33,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_observer(particle_particle_collision);
     app.add_observer(split_particle);
 
-    // invincibility
+    // Invincibility
 
     app.add_systems(
         Update,
@@ -47,7 +47,7 @@ pub(super) fn plugin(app: &mut App) {
         ),
     );
 
-    // arrows
+    // Arrows
 
     app.register_type::<Arrows>();
     app.register_type::<ArrowsOf>();
@@ -128,6 +128,7 @@ pub struct ArrowsOf(Entity);
 
 pub fn particle_bundle(
     translation: Vec2,
+    with_invincibility: bool,
     particle: Particle,
     particle_assets: &ParticleAssets,
 ) -> impl Bundle {
@@ -180,13 +181,36 @@ pub fn particle_bundle(
                 MeshMaterial2d(particle.material.clone()),
                 RigidBody::Dynamic,
                 Collider::ball(particle.radius),
+                children![(
+                    Name::new("Particle Sensor"),
+                    ActiveEvents::COLLISION_EVENTS,
+                    CollisionGroups::new(Group::GROUP_3, Group::GROUP_3),
+                    Collider::ball(particle.radius),
+                    Sensor
+                )],
                 ActiveEvents::COLLISION_EVENTS,
                 Velocity {
                     linvel: particle.initial_velocity,
                     angvel: 0.0,
                 },
-                particle,
-                Invincible::new(particle_assets.invincibility_duration)
+                Maybe({
+                    if with_invincibility {
+                        Some((
+                            Invincible::new(particle_assets.invincibility_duration),
+                            CollisionGroups::new(Group::GROUP_2, Group::GROUP_1 | Group::GROUP_2),
+                        ))
+                    } else {
+                        None
+                    }
+                }),
+                Maybe({
+                    if with_invincibility {
+                        None
+                    } else {
+                        Some(CollisionGroups::new(Group::GROUP_3, Group::GROUP_1))
+                    }
+                }),
+                particle
             )
         ],
     )
@@ -195,7 +219,12 @@ pub fn particle_bundle(
 // System that triggers specialized collision events.
 fn particle_collision_handler(
     mut collision_events: EventReader<CollisionEvent>,
-    query: Query<(Option<&Particle>, Option<&Player>), With<RigidBody>>,
+    query: Query<(
+        Option<&RigidBody>,
+        Option<&Particle>,
+        Option<&Player>,
+        &ChildOf,
+    )>,
     mut commands: Commands,
 ) {
     for event in collision_events.read() {
@@ -203,11 +232,28 @@ fn particle_collision_handler(
             return;
         };
 
-        let Ok((e1_particle, e1_player)) = query.get(e1) else {
+        // This helper closure traverses the hierarchy from the given entity until the first one
+        // with a rigid body and returns its entity id and possibly existing player and particle
+        // components.
+        let helper = |mut entity: Entity| -> Option<(Entity, Option<&Player>, Option<&Particle>)> {
+            loop {
+                let Ok((rigid_body, particle, player, parent)) = query.get(entity) else {
+                    return None;
+                };
+
+                if rigid_body.is_some() {
+                    return Some((entity, player, particle));
+                }
+
+                entity = parent.0;
+            }
+        };
+
+        let Some((e1, e1_player, e1_particle)) = helper(e1) else {
             return;
         };
 
-        let Ok((e2_particle, e2_player)) = query.get(e2) else {
+        let Some((e2, e2_player, e2_particle)) = helper(e2) else {
             return;
         };
 
@@ -240,10 +286,16 @@ pub struct PlayerParticleCollisionEvent {
 fn player_particle_collision(
     trigger: Trigger<PlayerParticleCollisionEvent>,
     mut player_query: Query<(&mut Player, &mut Velocity)>,
+    mut particle_query: Query<Option<&Invincible>, (With<Particle>, Without<Player>)>,
     mut timestep_mode: ResMut<TimestepMode>,
     time_speed: Res<TimeSpeed>,
     mut commands: Commands,
 ) {
+    let invincible = particle_query.get(trigger.particle).unwrap();
+    if invincible.is_some() {
+        return;
+    }
+
     let (mut player, mut velocity) = player_query.single_mut().unwrap();
     player.can_move = true;
 
@@ -303,15 +355,9 @@ fn split_particle(
 
         let spawn_position = position.xy() + offset;
         commands.spawn((
-            particle_bundle(spawn_position, sub_particle, particle_assets.as_ref()),
+            particle_bundle(spawn_position, true, sub_particle, particle_assets.as_ref()),
             // The subparticle will have the same parent as the particle if it has a parent.
-            Maybe({
-                if let Some(parent) = parent {
-                    Some(ChildOf(parent.0))
-                } else {
-                    None
-                }
-            }),
+            Maybe(parent.map(|parent| ChildOf(parent.0))),
         ));
     }
 
@@ -341,7 +387,12 @@ fn tick_invincibility(
         invincible.0.tick(time.delta());
 
         if invincible.0.just_finished() {
-            commands.entity(entity).remove::<Invincible>();
+            commands
+                .entity(entity)
+                .remove::<Invincible>()
+                .remove::<CollisionGroups>()
+                .insert(CollisionGroups::new(Group::GROUP_3, Group::GROUP_1));
+
             material.0 = particle.material.clone();
         }
     }

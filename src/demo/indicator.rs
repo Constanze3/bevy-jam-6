@@ -21,21 +21,25 @@ pub(super) fn plugin(app: &mut App) {
 pub fn drag_indicator(
     thickness: f32,
     length_scalar: f32,
-    color: Color,
+    active_color: Color,
+    inactive_color: Color,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<ColorMaterial>,
 ) -> impl Bundle {
     let mesh = meshes.reserve_handle();
-    let material = materials.add(color);
+    let active_material = materials.add(active_color);
+    let inactive_material = materials.add(inactive_color);
 
     (
         Name::new("Drag Indicator"),
         Mesh2d(mesh.clone()),
-        MeshMaterial2d(material),
+        MeshMaterial2d(active_material.clone()),
         DragIndicator {
             mesh,
             thickness,
             length_scalar,
+            active_material,
+            inactive_material,
         },
     )
 }
@@ -45,13 +49,20 @@ pub struct DragIndicator {
     pub mesh: Handle<Mesh>,
     pub thickness: f32,
     pub length_scalar: f32,
+    pub active_material: Handle<ColorMaterial>,
+    pub inactive_material: Handle<ColorMaterial>,
 }
 
 fn update_drag_indicator(
     input_controller: Res<InputController>,
     player_query: Query<(&Player, &Transform)>,
     mut indicator_query: Query<
-        (&mut DragIndicator, &mut Transform, &mut Visibility),
+        (
+            &mut DragIndicator,
+            &mut Transform,
+            &mut Visibility,
+            &mut MeshMaterial2d<ColorMaterial>,
+        ),
         Without<Player>,
     >,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -71,7 +82,7 @@ fn update_drag_indicator(
             break 'blk false;
         }
 
-        for (indicator, mut indicator_transform, mut indicator_visibility) in
+        for (indicator, mut indicator_transform, mut indicator_visibility, mut material) in
             indicator_query.iter_mut()
         {
             let length = vector.length() * indicator.length_scalar;
@@ -89,6 +100,13 @@ fn update_drag_indicator(
                     *mesh = new_mesh;
                 } else {
                     meshes.insert(mesh_id, new_mesh);
+                }
+
+                // Update material.
+                if vector.length() <= input_controller.min_length {
+                    material.0 = indicator.inactive_material.clone();
+                } else {
+                    material.0 = indicator.active_material.clone();
                 }
 
                 // Adjust its position and rotation.
