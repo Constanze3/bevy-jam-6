@@ -70,7 +70,6 @@ pub(super) fn plugin(app: &mut App) {
 pub struct ParticleAssets {
     #[dependency]
     arrow_image: Handle<Image>,
-    arrow_end_width: f32,
     arrow_offset: f32,
     arrow_scale: f32,
     invincibility_duration: Duration,
@@ -90,7 +89,6 @@ impl FromWorld for ParticleAssets {
 
         Self {
             arrow_image,
-            arrow_end_width: 0.2,
             arrow_offset: 3.0,
             arrow_scale: 0.02,
             invincibility_duration: Duration::from_secs_f32(0.5),
@@ -139,10 +137,7 @@ pub fn particle_bundle(
             let direction = sub_particle.initial_velocity.normalize();
             let angle = direction.y.atan2(direction.x);
 
-            let r = particle.radius;
-            let w = particle_assets.arrow_end_width;
-            let offset = (r.powi(2) - (w / 2.0).powi(2)).sqrt() + particle_assets.arrow_offset;
-
+            let offset = particle.radius + particle_assets.arrow_offset;
             let position = Vec2::ZERO + direction * offset;
 
             result.push(Transform {
