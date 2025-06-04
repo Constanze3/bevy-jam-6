@@ -13,7 +13,18 @@ mod menus;
 mod screens;
 mod theme;
 
-use bevy::{asset::AssetMetaCheck, prelude::*};
+use bevy::{
+    asset::AssetMetaCheck,
+    image::{TextureFormatPixelInfo, Volume},
+    prelude::*,
+    render::{
+        camera::RenderTarget,
+        render_resource::{
+            Extent3d, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages,
+        },
+        view::RenderLayers,
+    },
+};
 use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
 use bevy_rapier2d::{prelude::*, rapier::prelude::IntegrationParameters};
 
@@ -155,6 +166,76 @@ struct Pause(pub bool);
 #[derive(SystemSet, Copy, Clone, Eq, PartialEq, Hash, Debug)]
 struct PausableSystems;
 
-fn spawn_camera(mut commands: Commands) {
-    commands.spawn((Name::new("Camera"), Camera2d));
+fn spawn_camera(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
+    let size = Extent3d {
+        width: 1920,
+        height: 1080,
+        depth_or_array_layers: 1,
+    };
+
+    let format = TextureFormat::bevy_default();
+
+    let image = Image {
+        data: Some(vec![0; size.volume() * format.pixel_size()]),
+        texture_descriptor: TextureDescriptor {
+            label: None,
+            size,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: TextureDimension::D2,
+            format,
+            usage: TextureUsages::TEXTURE_BINDING
+                | TextureUsages::COPY_DST
+                | TextureUsages::RENDER_ATTACHMENT,
+            view_formats: &[],
+        },
+        ..default()
+    };
+
+    let image_handle = images.add(image);
+
+    commands.spawn((
+        Name::new("Main Camera"),
+        Camera2d,
+        Projection::Orthographic(OrthographicProjection {
+            scaling_mode: bevy::render::camera::ScalingMode::Fixed {
+                width: 1920.0 / 1.5,
+                height: 1080.0 / 1.5,
+            },
+            ..OrthographicProjection::default_2d()
+        }),
+        Camera {
+            order: 1,
+            target: RenderTarget::Image(image_handle.clone().into()),
+            ..default()
+        },
+    ));
+
+    commands.spawn((
+        Name::new("Display Camera"),
+        Camera2d,
+        IsDefaultUiCamera,
+        RenderLayers::layer(1),
+    ));
+
+    commands.spawn((
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::Center,
+            ..default()
+        },
+        BackgroundColor(Color::srgb(0.0, 0.0, 0.0)),
+        children![(
+            Node {
+                max_width: Val::Px(888.0),
+                max_height: Val::Px(500.0),
+                ..default()
+            },
+            BackgroundColor(Color::srgb(1.0, 0.0, 0.0)),
+            children![ImageNode::new(image_handle)]
+        )],
+        RenderLayers::layer(1),
+    ));
 }
