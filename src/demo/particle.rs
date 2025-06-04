@@ -240,10 +240,16 @@ pub struct PlayerParticleCollisionEvent {
 fn player_particle_collision(
     trigger: Trigger<PlayerParticleCollisionEvent>,
     mut player_query: Query<(&mut Player, &mut Velocity)>,
+    mut particle_query: Query<Option<&Invincible>, (With<Particle>, Without<Player>)>,
     mut timestep_mode: ResMut<TimestepMode>,
     time_speed: Res<TimeSpeed>,
     mut commands: Commands,
 ) {
+    let invincible = particle_query.get(trigger.particle).unwrap();
+    if invincible.is_some() {
+        return;
+    }
+
     let (mut player, mut velocity) = player_query.single_mut().unwrap();
     player.can_move = true;
 
