@@ -233,7 +233,8 @@ fn particle_collision_handler(
         };
 
         // This helper closure traverses the hierarchy from the given entity until the first one
-        // with a rigid body and returns its possibly existing player and particle components.
+        // with a rigid body and returns its entity id and possibly existing player and particle
+        // components.
         let helper = |mut entity: Entity| -> Option<(Entity, Option<&Player>, Option<&Particle>)> {
             loop {
                 let Ok((rigid_body, particle, player, parent)) = query.get(entity) else {
@@ -285,14 +286,11 @@ pub struct PlayerParticleCollisionEvent {
 fn player_particle_collision(
     trigger: Trigger<PlayerParticleCollisionEvent>,
     mut player_query: Query<(&mut Player, &mut Velocity)>,
-    name_query: Query<&Name>,
     mut particle_query: Query<Option<&Invincible>, (With<Particle>, Without<Player>)>,
     mut timestep_mode: ResMut<TimestepMode>,
     time_speed: Res<TimeSpeed>,
     mut commands: Commands,
 ) {
-    println!("{}", name_query.get(trigger.particle).unwrap());
-
     let invincible = particle_query.get(trigger.particle).unwrap();
     if invincible.is_some() {
         return;
