@@ -6,7 +6,10 @@ use bevy::{
 };
 use bevy_rapier2d::prelude::{Collider, Restitution, RigidBody};
 
-use crate::{asset_tracking::LoadResource, demo::player::player, screens::Screen};
+use crate::{
+    AppSystems, PausableSystems, asset_tracking::LoadResource, demo::player::player,
+    screens::Screen,
+};
 
 use super::{
     indicator::drag_indicator,
@@ -16,6 +19,16 @@ use super::{
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<LevelAssets>();
     app.load_resource::<LevelAssets>();
+
+    app.add_observer(spawn_level);
+    app.add_systems(
+        Update,
+        restart_level
+            .run_if(in_state(Screen::Gameplay))
+            .in_set(AppSystems::Update)
+            .in_set(PausableSystems),
+    );
+
     app.add_systems(Update, update_screen_bounds);
 }
 
@@ -35,8 +48,15 @@ impl FromWorld for LevelAssets {
     }
 }
 
+#[derive(Component)]
+pub struct Level;
+
+#[derive(Event)]
+pub struct SpawnLevel;
+
 /// A system that spawns the main level.
 pub fn spawn_level(
+    _: Trigger<SpawnLevel>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
@@ -57,6 +77,7 @@ pub fn spawn_level(
 
     commands.spawn((
         Name::new("Level"),
+        Level,
         Transform::default(),
         Visibility::default(),
         StateScoped(Screen::Gameplay),
@@ -187,5 +208,17 @@ fn update_screen_bounds(
                 _ => {}
             }
         }
+    }
+}
+
+fn restart_level(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    level_query: Query<Entity, With<Level>>,
+    mut commands: Commands,
+) {
+    if keyboard_input.just_pressed(KeyCode::Space) {
+        let level = level_query.single().unwrap();
+        commands.entity(level).despawn();
+        commands.trigger(SpawnLevel);
     }
 }
