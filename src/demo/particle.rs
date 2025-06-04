@@ -34,6 +34,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_observer(split_particle);
 
     // invincibility
+
     app.add_systems(
         Update,
         (
@@ -41,6 +42,23 @@ pub(super) fn plugin(app: &mut App) {
                 .in_set(AppSystems::Update)
                 .run_if(in_state(Screen::Gameplay)),
             tick_invincibility
+                .in_set(AppSystems::Update)
+                .in_set(PausableSystems),
+        ),
+    );
+
+    // arrows
+
+    app.register_type::<Arrows>();
+    app.register_type::<ArrowsOf>();
+
+    app.add_systems(
+        Update,
+        (
+            setup_arrows_relationship
+                .in_set(AppSystems::Update)
+                .run_if(in_state(Screen::Gameplay)),
+            move_arrows
                 .in_set(AppSystems::Update)
                 .in_set(PausableSystems),
         ),
@@ -100,8 +118,15 @@ impl Invincible {
     }
 }
 
-#[derive(Component)]
-pub struct Arrows;
+#[derive(Component, Reflect)]
+#[reflect(Component)]
+#[relationship_target(relationship = ArrowsOf)]
+pub struct Arrows(Entity);
+
+#[derive(Component, Reflect)]
+#[reflect(Component)]
+#[relationship(relationship_target = Arrows)]
+pub struct ArrowsOf(Entity);
 
 pub fn particle_bundle(
     translation: Vec2,
@@ -152,7 +177,6 @@ pub fn particle_bundle(
                         }
                     }
                 })),
-                Arrows,
             ),
             (
                 Name::new("Particle"),
@@ -325,5 +349,31 @@ fn tick_invincibility(
             commands.entity(entity).remove::<Invincible>();
             material.0 = particle.material.clone();
         }
+    }
+}
+
+fn setup_arrows_relationship(
+    particle_query: Query<(Entity, &ChildOf), Added<Particle>>,
+    parent_query: Query<&Children>,
+    mut commands: Commands,
+) {
+    for (particle_entity, parent_entity) in particle_query.iter() {
+        let children = parent_query.get(parent_entity.0).unwrap();
+
+        for child in children.iter() {
+            if child != particle_entity {
+                commands.entity(child).insert(ArrowsOf(particle_entity));
+            }
+        }
+    }
+}
+
+fn move_arrows(
+    particle_query: Query<(&Transform, &Arrows), With<Particle>>,
+    mut arrows_query: Query<&mut Transform, Without<Particle>>,
+) {
+    for (particle_transform, arrows) in particle_query.iter() {
+        let mut arrows_transform = arrows_query.get_mut(arrows.0).unwrap();
+        arrows_transform.translation = particle_transform.translation.xy().extend(ARROWS_LOCAL_Z);
     }
 }
