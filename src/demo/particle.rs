@@ -128,6 +128,7 @@ pub struct ArrowsOf(Entity);
 
 pub fn particle_bundle(
     translation: Vec2,
+    with_invincibility: bool,
     particle: Particle,
     particle_assets: &ParticleAssets,
 ) -> impl Bundle {
@@ -186,7 +187,13 @@ pub fn particle_bundle(
                     angvel: 0.0,
                 },
                 particle,
-                Invincible::new(particle_assets.invincibility_duration)
+                Maybe({
+                    if with_invincibility {
+                        Some(Invincible::new(particle_assets.invincibility_duration))
+                    } else {
+                        None
+                    }
+                })
             )
         ],
     )
@@ -309,7 +316,7 @@ fn split_particle(
 
         let spawn_position = position.xy() + offset;
         commands.spawn((
-            particle_bundle(spawn_position, sub_particle, particle_assets.as_ref()),
+            particle_bundle(spawn_position, true, sub_particle, particle_assets.as_ref()),
             // The subparticle will have the same parent as the particle if it has a parent.
             Maybe({
                 if let Some(parent) = parent {

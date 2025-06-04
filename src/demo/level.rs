@@ -93,6 +93,7 @@ pub fn spawn_level(
             obstacle(vec2(100.0, 0.0), 50.0, &mut meshes, &mut materials),
             particle_bundle(
                 vec2(-100.0, 0.0),
+                false,
                 Particle {
                     radius: particle_radius,
                     initial_velocity: Vec2::ZERO,

@@ -118,6 +118,7 @@ fn update_placement_preview(
                     EditorTool::PlaceAtom => {
                         let bundle = particle_bundle(
                             vec2(-100.0, 0.0),
+                            false,
                             Particle {
                                 radius: editor_settings.atom_radius,
                                 initial_velocity: Vec2::ZERO,
@@ -312,6 +313,7 @@ fn handle_editor_input(
 
                     let bundle = particle_bundle(
                         vec2(-100.0, 0.0),
+                        false,
                         Particle {
                             radius: editor_settings.atom_radius,
                             initial_velocity: Vec2::ZERO,
