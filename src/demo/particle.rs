@@ -7,8 +7,8 @@ use bevy::{
 use bevy_rapier2d::prelude::*;
 
 use crate::{
-    AppSystems, PausableSystems, asset_tracking::LoadResource, external::maybe::Maybe,
-    screens::Screen,
+    AppSystems, PausableSystems, asset_tracking::LoadResource, audio::sound_effect,
+    external::maybe::Maybe, screens::Screen,
 };
 
 use super::player::{Player, TimeSpeed};
@@ -74,25 +74,26 @@ pub struct ParticleAssets {
     arrow_scale: f32,
     invincibility_duration: Duration,
     invincible_material: Handle<ColorMaterial>,
+    #[dependency]
+    pop_sound: Handle<AudioSource>,
 }
 
 impl FromWorld for ParticleAssets {
     fn from_world(world: &mut World) -> Self {
-        let assets = world.resource::<AssetServer>();
-
-        let arrow_image = assets.load("images/arrow.png");
-
         let mut materials = world.resource_mut::<Assets<ColorMaterial>>();
         let invincible_material = materials.add(ColorMaterial::from_color(Color::Srgba(
             Srgba::hex("f7bd1d").unwrap(),
         )));
 
+        let assets = world.resource::<AssetServer>();
+
         Self {
-            arrow_image,
+            arrow_image: assets.load("images/arrow.png"),
             arrow_offset: 3.0,
             arrow_scale: 0.02,
             invincibility_duration: Duration::from_secs_f32(0.5),
             invincible_material,
+            pop_sound: assets.load("audio/sound_effects/pop.ogg"),
         }
     }
 }
@@ -289,6 +290,7 @@ fn player_particle_collision(
     mut particle_query: Query<Option<&Invincible>, (With<Particle>, Without<Player>)>,
     mut timestep_mode: ResMut<TimestepMode>,
     time_speed: Res<TimeSpeed>,
+    particle_assets: Res<ParticleAssets>,
     mut commands: Commands,
 ) {
     let invincible = particle_query.get(trigger.particle).unwrap();
@@ -306,6 +308,8 @@ fn player_particle_collision(
     }
 
     commands.trigger(ParticleSplitEvent(trigger.particle));
+
+    commands.spawn(sound_effect(particle_assets.pop_sound.clone()));
 }
 
 #[derive(Event)]
@@ -316,10 +320,13 @@ pub struct ParticleParticleCollisionEvent {
 
 fn particle_particle_collision(
     trigger: Trigger<ParticleParticleCollisionEvent>,
+    particle_assets: Res<ParticleAssets>,
     mut commands: Commands,
 ) {
     commands.trigger(ParticleSplitEvent(trigger.particle1));
     commands.trigger(ParticleSplitEvent(trigger.particle2));
+
+    commands.spawn(sound_effect(particle_assets.pop_sound.clone()));
 }
 
 #[derive(Event)]

@@ -14,20 +14,41 @@ use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
 use super::input::InputEvent;
-use crate::{AppSystems, PausableSystems};
+use crate::{
+    AppSystems, PausableSystems, asset_tracking::LoadResource, audio::sound_effect, screens::Screen,
+};
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<Player>();
     app.register_type::<TimeSpeed>();
 
+    app.load_resource::<PlayerAssets>();
     app.init_resource::<TimeSpeed>();
 
     app.add_systems(
         Update,
         handle_input
             .in_set(AppSystems::Update)
-            .in_set(PausableSystems),
+            .in_set(PausableSystems)
+            .run_if(in_state(Screen::Gameplay)),
     );
+}
+
+#[derive(Asset, Resource, Clone, Reflect)]
+#[reflect(Resource)]
+struct PlayerAssets {
+    #[dependency]
+    shoot_sound: Handle<AudioSource>,
+}
+
+impl FromWorld for PlayerAssets {
+    fn from_world(world: &mut World) -> Self {
+        let assets = world.resource::<AssetServer>();
+
+        Self {
+            shoot_sound: assets.load::<AudioSource>("audio/sound_effects/shoot.ogg"),
+        }
+    }
 }
 
 #[derive(Resource, Reflect)]
@@ -100,6 +121,8 @@ fn handle_input(
     mut query: Query<(&mut Player, &mut ExternalImpulse, &mut Velocity)>,
     mut timestep_mode: ResMut<TimestepMode>,
     time_speed: Res<TimeSpeed>,
+    player_assets: Res<PlayerAssets>,
+    mut commands: Commands,
 ) {
     if query.is_empty() {
         return;
@@ -114,6 +137,8 @@ fn handle_input(
     if let Some(event) = events.read().last() {
         velocity.linvel = Vec2::ZERO;
         external_impulse.impulse = player.force_scalar * event.vector;
+
+        commands.spawn(sound_effect(player_assets.shoot_sound.clone()));
 
         player.can_move = false;
 

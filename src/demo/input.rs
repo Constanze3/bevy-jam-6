@@ -1,9 +1,13 @@
-use crate::{AppSystems, PausableSystems, Pause, screens::Screen};
+use crate::{
+    AppSystems, PausableSystems, Pause, asset_tracking::LoadResource, audio::sound_effect,
+    screens::Screen,
+};
 use bevy::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<InputController>();
     app.init_resource::<InputController>();
+    app.load_resource::<InputAssets>();
 
     app.add_event::<InputEvent>();
 
@@ -17,6 +21,26 @@ pub(super) fn plugin(app: &mut App) {
 
     app.add_systems(OnEnter(Pause(true)), reset_input);
 }
+
+#[derive(Asset, Resource, Clone, Reflect)]
+#[reflect(Resource)]
+struct InputAssets {
+    #[dependency]
+    stretch_sound: Handle<AudioSource>,
+}
+
+impl FromWorld for InputAssets {
+    fn from_world(world: &mut World) -> Self {
+        let assets = world.resource::<AssetServer>();
+
+        Self {
+            stretch_sound: assets.load::<AudioSource>("audio/sound_effects/stretch.ogg"),
+        }
+    }
+}
+
+#[derive(Component)]
+struct StretchSound;
 
 #[derive(Resource, Reflect)]
 #[reflect(Resource)]
@@ -32,8 +56,8 @@ impl Default for InputController {
         Self {
             initial_position: None,
             vector: None,
-            min_length: 100.0,
-            max_length: 200.0,
+            min_length: 80.0,
+            max_length: 250.0,
         }
     }
 }
@@ -48,12 +72,19 @@ fn record_input(
     mut input_controller: ResMut<InputController>,
     window_query: Query<&Window>,
     mut events: EventWriter<InputEvent>,
+    input_assets: Res<InputAssets>,
+    stretch_sound_query: Query<Entity, With<StretchSound>>,
+    mut commands: Commands,
 ) {
     let window = window_query.single().unwrap();
 
     // Record initial mouse position.
     if input.just_pressed(MouseButton::Left) {
         input_controller.initial_position = window.cursor_position();
+        commands.spawn((
+            StretchSound,
+            sound_effect(input_assets.stretch_sound.clone()),
+        ));
     }
 
     // Update vector of input controller.
@@ -73,6 +104,10 @@ fn record_input(
 
     // Send input event.
     if input.just_released(MouseButton::Left) {
+        for stretch_sound in stretch_sound_query.iter() {
+            commands.entity(stretch_sound).despawn();
+        }
+
         let vector = calculate_vector(input_controller.initial_position, window.cursor_position());
 
         if let Some(vector) = vector {
