@@ -1,14 +1,11 @@
 //! Spawn the main level.
 
-use bevy::{
-    prelude::*,
-    window::{PrimaryWindow, WindowResized},
-};
+use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
 use crate::{
-    AppSystems, PausableSystems, asset_tracking::LoadResource, demo::player::player,
-    screens::Screen,
+    AppSystems, PausableSystems, asset_tracking::LoadResource, camera::Letterboxing,
+    demo::player::player, screens::Screen,
 };
 
 use super::{
@@ -28,8 +25,6 @@ pub(super) fn plugin(app: &mut App) {
             .in_set(AppSystems::Update)
             .in_set(PausableSystems),
     );
-
-    app.add_systems(Update, update_screen_bounds);
 }
 
 #[derive(Resource, Asset, Clone, Reflect)]
@@ -61,12 +56,10 @@ pub fn spawn_level(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     particle_assets: Res<ParticleAssets>,
-    window_query: Query<&Window, With<PrimaryWindow>>,
+    letterboxing: Res<Letterboxing>,
 ) {
-    let window = window_query.single().expect("PrimaryWindow not found");
-
     // Spawn screen bounds first
-    spawn_screen_bounds(&mut commands, window);
+    commands.spawn(screen_bounds(letterboxing.as_ref()));
 
     let particle_radius = 50.0;
     let particle_mesh = meshes.add(Circle::new(particle_radius));
@@ -141,76 +134,50 @@ pub fn obstacle(
     )
 }
 
-fn spawn_screen_bounds(commands: &mut Commands, window: &Window) {
-    let width = window.width();
-    let height = window.height();
-    commands.spawn((
-        Name::new("Left Wall"),
-        Transform::from_xyz(-width / 2.0, 0.0, 0.0),
-        RigidBody::Fixed,
-        Collider::cuboid(1.0, height / 2.0),
-        Restitution::coefficient(0.5),
-    ));
-    commands.spawn((
-        Name::new("Right Wall"),
-        Transform::from_xyz(width / 2.0, 0.0, 0.0),
-        RigidBody::Fixed,
-        Collider::cuboid(1.0, height / 2.0),
-        Restitution::coefficient(0.5),
-    ));
-    commands.spawn((
-        Name::new("Top Wall"),
-        Transform::from_xyz(0.0, height / 2.0, 0.0),
-        RigidBody::Fixed,
-        Collider::cuboid(width / 2.0, 1.0),
-        Restitution::coefficient(0.5),
-    ));
-    commands.spawn((
-        Name::new("Bottom Wall"),
-        Transform::from_xyz(0.0, -height / 2.0, 0.0),
-        RigidBody::Fixed,
-        Collider::cuboid(width / 2.0, 1.0),
-        Restitution::coefficient(0.5),
-    ));
-}
+fn screen_bounds(letterboxing: &Letterboxing) -> impl Bundle {
+    let width = letterboxing.projection_size.width;
+    let height = letterboxing.projection_size.height;
 
-// Add this system to handle window resizing
-fn update_screen_bounds(
-    mut resize_events: EventReader<WindowResized>,
-    mut collider_query: Query<(&Name, &mut Transform, &mut Collider)>,
-) {
-    for event in resize_events.read() {
-        let width = event.width;
-        let height = event.height;
-        let half_width = width / 2.0;
-        let half_height = height / 2.0;
+    let halfwidth = width / 2.0;
+    let halfheight = height / 2.0;
 
-        for (name, mut transform, mut collider) in collider_query.iter_mut() {
-            match name.as_str() {
-                "Left Wall" | "Right Wall" => {
-                    // Update vertical walls
-                    *collider = Collider::cuboid(1.0, half_height);
-                    // Update positions
-                    if name.as_str() == "Left Wall" {
-                        transform.translation.x = -half_width;
-                    } else {
-                        transform.translation.x = half_width;
-                    }
-                }
-                "Top Wall" | "Bottom Wall" => {
-                    // Update horizontal walls
-                    *collider = Collider::cuboid(half_width, 1.0);
-                    // Update positions
-                    if name.as_str() == "Top Wall" {
-                        transform.translation.y = half_height;
-                    } else {
-                        transform.translation.y = -half_height;
-                    }
-                }
-                _ => {}
-            }
-        }
-    }
+    let thickness = 1.0;
+    let restitution = 0.5;
+
+    (
+        Name::new("Screen Bounds"),
+        Transform::default(),
+        children![
+            (
+                Name::new("Left Wall"),
+                Transform::from_xyz(-(halfwidth + thickness), 0.0, 0.0),
+                RigidBody::Fixed,
+                Collider::cuboid(thickness, halfheight),
+                Restitution::coefficient(restitution),
+            ),
+            (
+                Name::new("Right Wall"),
+                Transform::from_xyz(halfwidth + thickness, 0.0, 0.0),
+                RigidBody::Fixed,
+                Collider::cuboid(thickness, halfheight),
+                Restitution::coefficient(restitution),
+            ),
+            (
+                Name::new("Top Wall"),
+                Transform::from_xyz(0.0, halfheight + thickness, 0.0),
+                RigidBody::Fixed,
+                Collider::cuboid(halfwidth, thickness),
+                Restitution::coefficient(restitution),
+            ),
+            (
+                Name::new("Bottom Wall"),
+                Transform::from_xyz(0.0, -(halfheight + thickness), 0.0),
+                RigidBody::Fixed,
+                Collider::cuboid(halfwidth, thickness),
+                Restitution::coefficient(restitution),
+            )
+        ],
+    )
 }
 
 fn restart_level(
