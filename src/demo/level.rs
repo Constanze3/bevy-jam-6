@@ -131,6 +131,7 @@ pub fn obstacle(
         MeshMaterial2d(material),
         RigidBody::Fixed,
         Collider::cuboid(size / 2.0, size / 2.0),
+        CollisionGroups::new(Group::GROUP_1, Group::all()),
     )
 }
 
@@ -153,6 +154,7 @@ fn screen_bounds(letterboxing: &Letterboxing) -> impl Bundle {
                 Transform::from_xyz(-(halfwidth + thickness), 0.0, 0.0),
                 RigidBody::Fixed,
                 Collider::cuboid(thickness, halfheight),
+                CollisionGroups::new(Group::GROUP_1, Group::all()),
                 Restitution::coefficient(restitution),
             ),
             (
@@ -160,6 +162,7 @@ fn screen_bounds(letterboxing: &Letterboxing) -> impl Bundle {
                 Transform::from_xyz(halfwidth + thickness, 0.0, 0.0),
                 RigidBody::Fixed,
                 Collider::cuboid(thickness, halfheight),
+                CollisionGroups::new(Group::GROUP_1, Group::all()),
                 Restitution::coefficient(restitution),
             ),
             (
@@ -167,6 +170,7 @@ fn screen_bounds(letterboxing: &Letterboxing) -> impl Bundle {
                 Transform::from_xyz(0.0, halfheight + thickness, 0.0),
                 RigidBody::Fixed,
                 Collider::cuboid(halfwidth, thickness),
+                CollisionGroups::new(Group::GROUP_1, Group::all()),
                 Restitution::coefficient(restitution),
             ),
             (
@@ -174,6 +178,7 @@ fn screen_bounds(letterboxing: &Letterboxing) -> impl Bundle {
                 Transform::from_xyz(0.0, -(halfheight + thickness), 0.0),
                 RigidBody::Fixed,
                 Collider::cuboid(halfwidth, thickness),
+                CollisionGroups::new(Group::GROUP_1, Group::all()),
                 Restitution::coefficient(restitution),
             )
         ],

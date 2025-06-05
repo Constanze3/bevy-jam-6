@@ -23,10 +23,10 @@ pub(super) fn plugin(app: &mut App) {
     app.register_type::<Particle>();
 
     app.add_systems(
-        Update,
+        PostUpdate,
         particle_collision_handler
-            .in_set(AppSystems::Update)
-            .in_set(PausableSystems),
+            .in_set(PausableSystems)
+            .after(PhysicsSet::Writeback),
     );
 
     app.add_observer(player_particle_collision);
@@ -184,11 +184,11 @@ pub fn particle_bundle(
                 children![(
                     Name::new("Particle Sensor"),
                     ActiveEvents::COLLISION_EVENTS,
+                    ActiveCollisionTypes::DYNAMIC_DYNAMIC,
                     CollisionGroups::new(Group::GROUP_3, Group::GROUP_3),
                     Collider::ball(particle.radius),
                     Sensor
                 )],
-                ActiveEvents::COLLISION_EVENTS,
                 Velocity {
                     linvel: particle.initial_velocity,
                     angvel: 0.0,
