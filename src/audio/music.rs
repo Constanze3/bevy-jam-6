@@ -54,6 +54,7 @@ fn update_gameplay_music(
 ) {
     for (entity, mut music, sink) in audio_query.iter_mut() {
         if sink.empty() {
+            #[allow(clippy::single_match)]
             match *music {
                 GameplayMusic::Intro => {
                     *music = GameplayMusic::Loop;
