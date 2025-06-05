@@ -279,7 +279,7 @@ fn handle_editor_input(
     particle_assets: Res<ParticleAssets>,
 ) {
     let ctx = contexts.ctx_mut();
-    if buttons.just_pressed(MouseButton::Left) && ctx.is_pointer_over_area() {
+    if buttons.just_pressed(MouseButton::Left) && !ctx.is_pointer_over_area() {
         println!("Left click detected in editor mode - not over UI"); // Debug print
 
         let (camera, camera_transform) = camera_q
