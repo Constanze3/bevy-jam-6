@@ -43,8 +43,8 @@ type InsertLoadedResource = fn(&mut World, &UntypedHandle);
 pub struct ResourceHandles {
     // Use a queue for waiting assets so they can be cycled through and moved to
     // `finished` one at a time.
-    waiting: VecDeque<(UntypedHandle, InsertLoadedResource)>,
-    finished: Vec<UntypedHandle>,
+    pub waiting: VecDeque<(UntypedHandle, InsertLoadedResource)>,
+    pub finished: Vec<UntypedHandle>,
 }
 
 impl ResourceHandles {

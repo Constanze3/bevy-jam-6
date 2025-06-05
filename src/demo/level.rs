@@ -4,8 +4,12 @@ use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
 use crate::{
-    AppSystems, PausableSystems, asset_tracking::LoadResource, camera::Letterboxing,
-    demo::player::player, screens::Screen,
+    AppSystems, PausableSystems,
+    asset_tracking::LoadResource,
+    audio::music::{MusicAssets, gameplay_music},
+    camera::Letterboxing,
+    demo::player::player,
+    screens::Screen,
 };
 
 use super::{
@@ -56,6 +60,7 @@ pub fn spawn_level(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     particle_assets: Res<ParticleAssets>,
+    music_assets: Res<MusicAssets>,
     letterboxing: Res<Letterboxing>,
 ) {
     // Spawn screen bounds first
@@ -74,6 +79,7 @@ pub fn spawn_level(
         Transform::default(),
         Visibility::default(),
         StateScoped(Screen::Gameplay),
+        gameplay_music(music_assets.as_ref()),
         children![
             player(20.0, 7000.0, &mut meshes, &mut materials),
             drag_indicator(

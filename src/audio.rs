@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+pub mod music;
+
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<Music>();
     app.register_type::<SoundEffect>();
@@ -8,6 +10,8 @@ pub(super) fn plugin(app: &mut App) {
         Update,
         apply_global_volume.run_if(resource_changed::<GlobalVolume>),
     );
+
+    app.add_plugins(music::plugin);
 }
 
 /// An organizational marker component that should be added to a spawned [`AudioPlayer`] if it's in the
