@@ -6,7 +6,7 @@ use bevy_rapier2d::prelude::*;
 use crate::{
     AppSystems, PausableSystems,
     asset_tracking::LoadResource,
-    audio::music::{MusicAssets, gameplay_music},
+    audio::music::{GameplayMusic, MusicAssets, gameplay_music},
     camera::Letterboxing,
     demo::player::player,
     screens::Screen,
@@ -56,12 +56,13 @@ pub struct SpawnLevel;
 /// A system that spawns the main level.
 pub fn spawn_level(
     _: Trigger<SpawnLevel>,
-    mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     particle_assets: Res<ParticleAssets>,
+    music_query: Query<Entity, With<GameplayMusic>>,
     music_assets: Res<MusicAssets>,
     letterboxing: Res<Letterboxing>,
+    mut commands: Commands,
 ) {
     // Spawn screen bounds first
     commands.spawn(screen_bounds(letterboxing.as_ref()));
@@ -73,13 +74,19 @@ pub fn spawn_level(
     let particle_radius2 = 40.0;
     let particle_mesh2 = meshes.add(Circle::new(particle_radius2));
 
+    if music_query.is_empty() {
+        commands.spawn((
+            gameplay_music(music_assets.as_ref()),
+            StateScoped(Screen::Gameplay),
+        ));
+    }
+
     commands.spawn((
         Name::new("Level"),
         Level,
         Transform::default(),
         Visibility::default(),
         StateScoped(Screen::Gameplay),
-        gameplay_music(music_assets.as_ref()),
         children![
             player(20.0, 7000.0, &mut meshes, &mut materials),
             drag_indicator(

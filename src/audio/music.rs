@@ -1,15 +1,13 @@
 use bevy::prelude::*;
 
-use crate::{AppSystems, asset_tracking::LoadResource, screens::Screen};
+use crate::{asset_tracking::LoadResource, screens::Screen};
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<MusicAssets>();
     app.load_resource::<MusicAssets>();
     app.add_systems(
-        Update,
-        update_gameplay_music
-            .in_set(AppSystems::Update)
-            .run_if(in_state(Screen::Gameplay)),
+        PostUpdate,
+        update_gameplay_music.run_if(in_state(Screen::Gameplay)),
     );
 }
 
