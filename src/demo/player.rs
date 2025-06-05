@@ -1,12 +1,9 @@
-//! Player-specific behavior.
 //!
 //! Collision groups are set up as follows:
 //!
 //! group_1 = terrain
 //! group_2 = player & invincible particles
 //! group_3 = normal particles
-//!
-//! Terrain collides with everything so technically they can also be on all groups (default value).
 //!
 //! group_2 collides with group_1 and group_2.
 //! group_3 collides only with group_1.
@@ -77,13 +74,13 @@ pub fn player(
             children![(
                 Name::new("Player Sensor"),
                 ActiveEvents::COLLISION_EVENTS,
+                ActiveCollisionTypes::DYNAMIC_DYNAMIC,
                 CollisionGroups::new(Group::GROUP_3, Group::GROUP_3),
                 Collider::ball(radius),
                 Sensor
             )],
             CollisionGroups::new(Group::GROUP_2, Group::GROUP_1 | Group::GROUP_2),
             Restitution::coefficient(0.5),
-            ActiveEvents::COLLISION_EVENTS,
             Velocity::default(),
             ExternalImpulse::default(),
         ),
