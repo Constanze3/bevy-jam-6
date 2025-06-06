@@ -4,6 +4,7 @@ use bevy::{
     ecs::{relationship::RelatedSpawner, spawn::SpawnWith, system::QueryLens},
     prelude::*,
 };
+use bevy_mod_picking::{prelude::On, PickableBundle};
 use bevy_rapier2d::prelude::*;
 
 use crate::{
@@ -177,6 +178,7 @@ pub fn particle_bundle(
         Name::new("Particle Bundle"),
         Transform::default(),
         Visibility::default(),
+        // PickableBundle::default(),
         children![
             (
                 Name::new("Arrows"),
