@@ -14,7 +14,7 @@ use crate::{
 
 use super::{
     indicator::drag_indicator,
-    particle::{Particle, ParticleAssets, particle_bundle},
+    particle::{Particle, ParticleAssets, ParticleKind, particle_bundle},
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -102,10 +102,12 @@ pub fn spawn_level(
                 vec2(-100.0, 0.0),
                 false,
                 Particle {
+                    kind: ParticleKind::Normal,
                     radius: particle_radius,
                     initial_velocity: Vec2::ZERO,
                     subparticles: vec![
                         Particle {
+                            kind: ParticleKind::Killer,
                             radius: particle_radius2,
                             initial_velocity: vec2(0.0, -200.0),
                             subparticles: vec![],
@@ -113,6 +115,7 @@ pub fn spawn_level(
                             material: particle_material.clone()
                         },
                         Particle {
+                            kind: ParticleKind::Normal,
                             radius: particle_radius2,
                             initial_velocity: vec2(0.0, 200.0),
                             subparticles: vec![],
