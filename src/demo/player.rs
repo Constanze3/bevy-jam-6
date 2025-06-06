@@ -96,7 +96,6 @@ pub fn player(
             children![(
                 Name::new("Player Sensor"),
                 ActiveEvents::COLLISION_EVENTS,
-                ActiveCollisionTypes::DYNAMIC_DYNAMIC,
                 CollisionGroups::new(Group::GROUP_3, Group::GROUP_3),
                 Collider::ball(radius),
                 Sensor

@@ -1,12 +1,14 @@
 use std::time::Duration;
 
+use arrows::{Arrows, ArrowsAssets, ArrowsConfig, ArrowsOf, arrows};
 use bevy::{
     ecs::{relationship::RelatedSpawner, spawn::SpawnWith, system::QueryLens},
     prelude::*,
 };
 use bevy_hanabi::{EffectProperties, EffectSpawner};
-use bevy_mod_picking::{PickableBundle, prelude::On};
 use bevy_rapier2d::prelude::*;
+use invincible::{Invincible, InvincibleRemoved};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     AppSystems, PausableSystems,
@@ -22,16 +24,20 @@ use super::{
     player::{Player, TimeSpeed},
 };
 
-const PARTICLE_LOCAL_Z: f32 = -2.0;
-const ARROWS_LOCAL_Z: f32 = -3.0;
+mod arrows;
+mod invincible;
 
 pub(super) fn plugin(app: &mut App) {
+    app.add_plugins((invincible::plugin, arrows::plugin));
+
+    app.init_resource::<ParticleConfig>();
+
     app.register_type::<ParticleAssets>();
     app.load_resource::<ParticleAssets>();
 
-    app.register_type::<Particle>();
-
     app.add_event::<ParticleSplitEvent>();
+
+    // Collision handling
 
     app.add_systems(
         PostUpdate,
@@ -48,197 +54,158 @@ pub(super) fn plugin(app: &mut App) {
 
     app.add_observer(player_particle_collision);
     app.add_observer(particle_particle_collision);
+    app.add_observer(spawn_particle);
 
     // Invincibility
 
     app.add_systems(
         Update,
         (
-            setup_invincibility
+            invincibility_added
                 .in_set(AppSystems::Update)
                 .run_if(in_state(Screen::Gameplay)),
-            tick_invincibility
-                .in_set(AppSystems::Update)
-                .in_set(PausableSystems),
-        ),
-    );
-
-    // Arrows
-
-    app.register_type::<Arrows>();
-    app.register_type::<ArrowsOf>();
-
-    app.add_systems(
-        Update,
-        (
-            setup_arrows_relationship
+            invincibility_removed
                 .in_set(AppSystems::Update)
                 .run_if(in_state(Screen::Gameplay)),
-            move_arrows
-                .in_set(AppSystems::Update)
-                .in_set(PausableSystems),
         ),
     );
+}
+
+#[derive(Resource, Reflect, Serialize, Deserialize)]
+#[reflect(Resource)]
+pub struct ParticleConfig {
+    local_z: f32,
+    invincibility_duration: Duration,
+}
+
+impl Default for ParticleConfig {
+    fn default() -> Self {
+        Self {
+            local_z: -2.0,
+            invincibility_duration: Duration::from_secs_f32(0.5),
+        }
+    }
 }
 
 #[derive(Resource, Asset, Clone, Reflect)]
 #[reflect(Resource)]
 pub struct ParticleAssets {
     #[dependency]
-    arrow_image: Handle<Image>,
-    arrow_offset: f32,
-    arrow_scale: f32,
-    invincibility_duration: Duration,
-    invincible_material: Handle<ColorMaterial>,
-    #[dependency]
     pop_sound: Handle<AudioSource>,
+    invincible_material: Handle<ColorMaterial>,
 }
 
 impl FromWorld for ParticleAssets {
     fn from_world(world: &mut World) -> Self {
+        let assets = world.resource::<AssetServer>();
+        let pop_sound = assets.load("audio/sound_effects/pop.ogg");
+
         let mut materials = world.resource_mut::<Assets<ColorMaterial>>();
         let invincible_material = materials.add(ColorMaterial::from_color(Color::Srgba(
             Srgba::hex("f7bd1d").unwrap(),
         )));
 
-        let assets = world.resource::<AssetServer>();
-
         Self {
-            arrow_image: assets.load("images/arrow.png"),
-            arrow_offset: 3.0,
-            arrow_scale: 0.02,
-            invincibility_duration: Duration::from_secs_f32(0.5),
+            pop_sound,
             invincible_material,
-            pop_sound: assets.load("audio/sound_effects/pop.ogg"),
         }
     }
 }
 
-#[derive(Debug, Clone, Reflect, PartialEq, Eq)]
+#[derive(Debug, Clone, Reflect, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum ParticleKind {
+    #[default]
     Normal,
     Killer,
 }
 
-#[derive(Component, Debug, Clone, Reflect)]
-#[reflect(no_field_bounds)]
+#[derive(Component, Debug, Clone, Serialize, Deserialize)]
 pub struct Particle {
     pub kind: ParticleKind,
     pub radius: f32,
+    pub color: Color,
     pub initial_velocity: Vec2,
-    pub subparticles: Vec<Particle>,
-    pub mesh: Handle<Mesh>,
-    pub material: Handle<ColorMaterial>,
+    pub subparticles: Vec<Box<Particle>>,
 }
 
-#[derive(Component)]
-pub struct Invincible(Timer);
-
-impl Invincible {
-    fn new(duration: Duration) -> Self {
-        Self(Timer::new(duration, TimerMode::Once))
+impl Default for Particle {
+    fn default() -> Self {
+        Self {
+            kind: ParticleKind::default(),
+            radius: 20.0,
+            color: Color::Srgba(Srgba::hex("0f95e2").unwrap()),
+            initial_velocity: Vec2::ZERO,
+            subparticles: Vec::new(),
+        }
     }
 }
 
-#[derive(Component, Reflect)]
-#[reflect(Component)]
-#[relationship_target(relationship = ArrowsOf)]
-pub struct Arrows(Entity);
+pub fn particle(
+    translation: Vec2,
+    particle: Particle,
+    particle_config: &ParticleConfig,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<ColorMaterial>,
+) -> impl Bundle {
+    // TODO crate a cache for these
+    let mesh = meshes.add(Circle::new(particle.radius));
+    let material = materials.add(particle.color);
 
-#[derive(Component, Reflect)]
-#[reflect(Component)]
-#[relationship(relationship_target = Arrows)]
-pub struct ArrowsOf(Entity);
+    (
+        Name::new("Particle"),
+        Transform::from_translation(translation.extend(particle_config.local_z)),
+        Mesh2d(mesh),
+        MeshMaterial2d(material),
+        RigidBody::Dynamic,
+        Collider::ball(particle.radius),
+        children![(
+            Name::new("Particle Sensor"),
+            ActiveEvents::COLLISION_EVENTS,
+            CollisionGroups::new(Group::GROUP_3, Group::GROUP_3),
+            Collider::ball(particle.radius),
+            Sensor
+        )],
+        Velocity {
+            linvel: particle.initial_velocity,
+            angvel: 0.0,
+        },
+        CollisionGroups::new(Group::GROUP_3, Group::GROUP_1),
+        Maybe((particle.kind == ParticleKind::Killer).then_some(Killer)),
+        particle,
+    )
+}
 
 pub fn particle_bundle(
     translation: Vec2,
-    with_invincibility: bool,
     particle: Particle,
-    particle_assets: &ParticleAssets,
+    spawn_as_invincible: bool,
+    particle_config: &ParticleConfig,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<ColorMaterial>,
+    arrows_config: &ArrowsConfig,
+    arrows_assets: &ArrowsAssets,
 ) -> impl Bundle {
-    let arrow_transforms = {
-        let mut result = Vec::new();
-        for sub_particle in particle.subparticles.iter() {
-            let direction = sub_particle.initial_velocity.normalize();
-            let angle = direction.y.atan2(direction.x);
+    let spawn_list = {
+        let arrows_config = arrows_config.clone();
+        let arrows_assets = arrows_assets.clone();
+        let particle = particle.clone();
 
-            let offset = particle.radius + particle_assets.arrow_offset;
-            let position = Vec2::ZERO + direction * offset;
-
-            result.push(Transform {
-                translation: position.extend(0.0),
-                rotation: Quat::from_rotation_z(angle),
-                scale: Vec3::ONE * particle_assets.arrow_scale,
-            });
+        move |spawner: &mut RelatedSpawner<ArrowsOf>| {
+            spawner.spawn(arrows(
+                translation,
+                &particle,
+                &arrows_config,
+                &arrows_assets,
+            ));
         }
-
-        result
     };
 
     (
-        Name::new("Particle Bundle"),
-        Transform::default(),
-        Visibility::default(),
-        // PickableBundle::default(),
-        children![
-            (
-                Name::new("Arrows"),
-                Transform::from_translation(translation.extend(ARROWS_LOCAL_Z)),
-                Visibility::default(),
-                Children::spawn(SpawnWith({
-                    let arrow = particle_assets.arrow_image.clone();
-
-                    move |parent: &mut RelatedSpawner<ChildOf>| {
-                        for transform in arrow_transforms {
-                            parent.spawn((
-                                Name::new("Arrow"),
-                                Sprite::from_image(arrow.clone()),
-                                transform,
-                            ));
-                        }
-                    }
-                })),
-            ),
-            (
-                Name::new("Particle"),
-                Transform::from_translation(translation.extend(PARTICLE_LOCAL_Z)),
-                Mesh2d(particle.mesh.clone()),
-                MeshMaterial2d(particle.material.clone()),
-                RigidBody::Dynamic,
-                Collider::ball(particle.radius),
-                children![(
-                    Name::new("Particle Sensor"),
-                    ActiveEvents::COLLISION_EVENTS,
-                    ActiveCollisionTypes::DYNAMIC_DYNAMIC,
-                    CollisionGroups::new(Group::GROUP_3, Group::GROUP_3),
-                    Collider::ball(particle.radius),
-                    Sensor
-                )],
-                Velocity {
-                    linvel: particle.initial_velocity,
-                    angvel: 0.0,
-                },
-                Maybe({
-                    if with_invincibility {
-                        Some((
-                            Invincible::new(particle_assets.invincibility_duration),
-                            CollisionGroups::new(Group::GROUP_2, Group::GROUP_1 | Group::GROUP_2),
-                        ))
-                    } else {
-                        None
-                    }
-                }),
-                Maybe({
-                    if with_invincibility {
-                        None
-                    } else {
-                        Some(CollisionGroups::new(Group::GROUP_3, Group::GROUP_1))
-                    }
-                }),
-                Maybe((particle.kind == ParticleKind::Killer).then_some(Killer)),
-                particle,
-            )
-        ],
+        Arrows::spawn(SpawnWith(spawn_list)),
+        Maybe(
+            spawn_as_invincible.then_some(Invincible::new(particle_config.invincibility_duration)),
+        ),
+        self::particle(translation, particle, particle_config, meshes, materials),
     )
 }
 
@@ -344,32 +311,35 @@ pub struct ParticleSplitEvent(pub Entity);
 fn split_particle(
     mut events: EventReader<ParticleSplitEvent>,
     mut particle_query: Query<
-        (Option<&Invincible>, &ChildOf, &Transform, &mut Particle),
+        (
+            Entity,
+            Option<&Invincible>,
+            &Transform,
+            &mut Particle,
+            Option<&ChildOf>,
+        ),
         Without<Player>,
     >,
-    parent_query: Query<Option<&ChildOf>, (Without<Player>, Without<Particle>)>,
     player_query: Query<&Player>,
     mut commands: Commands,
-    particle_assets: Res<ParticleAssets>,
     mut effect: Query<
         (&mut EffectProperties, &mut EffectSpawner, &mut Transform),
         Without<Particle>,
     >,
 ) {
     for event in events.read() {
-        let (invincible, bundle, transform, mut particle) =
+        let (entity, invincible, transform, mut particle, parent) =
             particle_query.get_mut(event.0).unwrap();
-
-        let bundle = bundle.0;
 
         if invincible.is_some() {
             return;
         }
-        let Ok((mut properties, mut effect_spawner, mut effect_transform)) =
-            effect.get_single_mut()
+
+        let Ok((mut properties, mut effect_spawner, mut effect_transform)) = effect.single_mut()
         else {
             return;
         };
+
         let position = transform.translation;
         // This isn't the most accurate place to spawn the particle effect,
         // but this is just for demonstration, so whatever.
@@ -387,81 +357,97 @@ fn split_particle(
 
         let player = player_query.single().unwrap();
 
-        let parent = parent_query.get(bundle).unwrap();
-
         let sub_particles = std::mem::take(&mut particle.subparticles);
-        for sub_particle in sub_particles {
-            let offset_distance = particle.radius + 2.0 * player.radius + sub_particle.radius;
-            let offset = sub_particle.initial_velocity.normalize() * offset_distance;
+        for subparticle in sub_particles {
+            let subparticle = *subparticle;
+
+            let offset_distance = particle.radius + 2.0 * player.radius + subparticle.radius;
+            let offset = subparticle.initial_velocity.normalize() * offset_distance;
 
             let spawn_position = position.xy() + offset;
-            commands.spawn((
-                particle_bundle(spawn_position, true, sub_particle, particle_assets.as_ref()),
-                // The subparticle will have the same parent as the particle if it has a parent.
-                Maybe(parent.map(|parent| ChildOf(parent.0))),
-            ));
+
+            commands.trigger(SpawnParticle {
+                translation: spawn_position,
+                particle: subparticle,
+                spawn_with_invincible: true,
+                parent: parent.map(|x| x.0),
+            });
         }
 
-        commands.entity(bundle).despawn();
+        commands.entity(entity).despawn();
     }
 }
 
-fn setup_invincibility(
-    mut query: Query<&mut MeshMaterial2d<ColorMaterial>, Added<Invincible>>,
-    particle_assets: Res<ParticleAssets>,
+#[derive(Event)]
+pub struct SpawnParticle {
+    pub translation: Vec2,
+    pub particle: Particle,
+    pub spawn_with_invincible: bool,
+    pub parent: Option<Entity>,
+}
+
+fn spawn_particle(
+    mut trigger: Trigger<SpawnParticle>,
+    particle_config: Res<ParticleConfig>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    arrows_config: Res<ArrowsConfig>,
+    arrows_assets: Res<ArrowsAssets>,
+    mut commands: Commands,
 ) {
-    for mut material in query.iter_mut() {
+    commands.spawn((
+        particle_bundle(
+            trigger.translation,
+            std::mem::take(&mut trigger.particle),
+            trigger.spawn_with_invincible,
+            particle_config.as_ref(),
+            meshes.as_mut(),
+            materials.as_mut(),
+            arrows_config.as_ref(),
+            arrows_assets.as_ref(),
+        ),
+        // The subparticle will have the same parent as the particle if it has a parent.
+        Maybe(trigger.parent.map(|parent| ChildOf(parent))),
+    ));
+}
+
+fn invincibility_added(
+    mut query: Query<
+        (Entity, &mut MeshMaterial2d<ColorMaterial>),
+        (With<Particle>, Added<Invincible>),
+    >,
+    particle_assets: Res<ParticleAssets>,
+    mut commands: Commands,
+) {
+    for (entity, mut material) in query.iter_mut() {
+        // Move particle back to collision group 2 so that it collides with the player.
+        commands
+            .entity(entity)
+            .remove::<CollisionGroups>()
+            .insert(CollisionGroups::new(
+                Group::GROUP_2,
+                Group::GROUP_1 | Group::GROUP_2,
+            ));
         material.0 = particle_assets.invincible_material.clone();
     }
 }
 
-fn tick_invincibility(
-    time: Res<Time>,
-    mut query: Query<(
-        Entity,
-        &mut Invincible,
-        &Particle,
-        &mut MeshMaterial2d<ColorMaterial>,
-    )>,
+fn invincibility_removed(
+    mut events: EventReader<InvincibleRemoved>,
+    mut query: Query<(Entity, &mut MeshMaterial2d<ColorMaterial>, &Particle)>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
     mut commands: Commands,
 ) {
-    for (entity, mut invincible, particle, mut material) in query.iter_mut() {
-        invincible.0.tick(time.delta());
+    for event in events.read() {
+        let entity = event.0;
+        let (entity, mut material, particle) = query.get_mut(entity).unwrap();
 
-        if invincible.0.just_finished() {
-            commands
-                .entity(entity)
-                .remove::<Invincible>()
-                .remove::<CollisionGroups>()
-                .insert(CollisionGroups::new(Group::GROUP_3, Group::GROUP_1));
+        // TODO crate a cache for these
+        material.0 = materials.add(particle.color);
 
-            material.0 = particle.material.clone();
-        }
-    }
-}
-
-fn setup_arrows_relationship(
-    particle_query: Query<(Entity, &ChildOf), Added<Particle>>,
-    parent_query: Query<&Children>,
-    mut commands: Commands,
-) {
-    for (particle_entity, parent_entity) in particle_query.iter() {
-        let children = parent_query.get(parent_entity.0).unwrap();
-
-        for child in children.iter() {
-            if child != particle_entity {
-                commands.entity(child).insert(ArrowsOf(particle_entity));
-            }
-        }
-    }
-}
-
-fn move_arrows(
-    particle_query: Query<(&Transform, &Arrows), With<Particle>>,
-    mut arrows_query: Query<&mut Transform, Without<Particle>>,
-) {
-    for (particle_transform, arrows) in particle_query.iter() {
-        let mut arrows_transform = arrows_query.get_mut(arrows.0).unwrap();
-        arrows_transform.translation = particle_transform.translation.xy().extend(ARROWS_LOCAL_Z);
+        commands
+            .entity(entity)
+            .remove::<CollisionGroups>()
+            .insert(CollisionGroups::new(Group::GROUP_3, Group::GROUP_1));
     }
 }

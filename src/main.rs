@@ -136,7 +136,6 @@ impl Plugin for AppPlugin {
             time_scale: 1.0,
             substeps: 2,
         });
-
     }
 }
 

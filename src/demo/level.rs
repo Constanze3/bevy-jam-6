@@ -14,7 +14,7 @@ use crate::{
 
 use super::{
     indicator::drag_indicator,
-    particle::{Particle, ParticleAssets, ParticleKind, particle_bundle},
+    particle::{Particle, SpawnParticle},
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -58,7 +58,6 @@ pub fn spawn_level(
     _: Trigger<SpawnLevel>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    particle_assets: Res<ParticleAssets>,
     music_query: Query<Entity, With<GameplayMusic>>,
     music_assets: Res<MusicAssets>,
     letterboxing: Res<Letterboxing>,
@@ -67,13 +66,6 @@ pub fn spawn_level(
     // Spawn screen bounds first
     commands.spawn(screen_bounds(letterboxing.as_ref()));
 
-    let particle_radius = 50.0;
-    let particle_mesh = meshes.add(Circle::new(particle_radius));
-    let particle_material = materials.add(Color::Srgba(Srgba::hex("0f95e2").unwrap()));
-
-    let particle_radius2 = 40.0;
-    let particle_mesh2 = meshes.add(Circle::new(particle_radius2));
-
     if music_query.is_empty() {
         commands.spawn((
             gameplay_music(music_assets.as_ref()),
@@ -81,55 +73,52 @@ pub fn spawn_level(
         ));
     }
 
-    commands.spawn((
-        Name::new("Level"),
-        Level,
-        Transform::default(),
-        Visibility::default(),
-        StateScoped(Screen::Gameplay),
-        children![
-            player(Vec2::new(0.0, -100.0), 20.0, 7000.0, &mut meshes, &mut materials),
-            drag_indicator(
-                6.0,
-                0.4,
-                Color::hsl(0.0, 0.0, 0.6),
-                Color::Srgba(Srgba::hex("7aad81").unwrap()),
-                &mut meshes,
-                &mut materials
-            ),
-            obstacle(vec2(100.0, 0.0), 50.0, &mut meshes, &mut materials),
-            particle_bundle(
-                vec2(-100.0, 0.0),
-                false,
-                Particle {
-                    kind: ParticleKind::Normal,
-                    radius: particle_radius,
-                    initial_velocity: Vec2::ZERO,
-                    subparticles: vec![
-                        Particle {
-                            kind: ParticleKind::Killer,
-                            radius: particle_radius2,
-                            initial_velocity: vec2(0.0, -200.0),
-                            subparticles: vec![],
-                            mesh: particle_mesh2.clone(),
-                            material: particle_material.clone()
-                        },
-                        Particle {
-                            kind: ParticleKind::Normal,
-                            radius: particle_radius2,
-                            initial_velocity: vec2(0.0, 200.0),
-                            subparticles: vec![],
-                            mesh: particle_mesh2.clone(),
-                            material: particle_material.clone()
-                        }
-                    ],
-                    mesh: particle_mesh.clone(),
-                    material: particle_material.clone()
-                },
-                particle_assets.as_ref()
-            )
-        ],
-    ));
+    let level = commands
+        .spawn((
+            Name::new("Level"),
+            Level,
+            Transform::default(),
+            Visibility::default(),
+            StateScoped(Screen::Gameplay),
+            children![
+                player(
+                    Vec2::new(0.0, -100.0),
+                    20.0,
+                    7000.0,
+                    &mut meshes,
+                    &mut materials
+                ),
+                drag_indicator(
+                    6.0,
+                    0.4,
+                    Color::hsl(0.0, 0.0, 0.6),
+                    Color::Srgba(Srgba::hex("7aad81").unwrap()),
+                    &mut meshes,
+                    &mut materials
+                ),
+                obstacle(vec2(100.0, 0.0), 50.0, &mut meshes, &mut materials),
+            ],
+        ))
+        .id();
+
+    commands.trigger(SpawnParticle {
+        translation: vec2(-100.0, 0.0),
+        particle: Particle {
+            subparticles: vec![
+                Box::new(Particle {
+                    initial_velocity: vec2(0.0, -200.0),
+                    ..default()
+                }),
+                Box::new(Particle {
+                    initial_velocity: vec2(0.0, 200.0),
+                    ..default()
+                }),
+            ],
+            ..default()
+        },
+        spawn_with_invincible: false,
+        parent: Some(level),
+    });
 }
 
 pub fn obstacle(
