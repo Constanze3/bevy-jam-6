@@ -11,6 +11,7 @@ mod demo;
 mod dev_tools;
 mod external;
 mod menus;
+mod physics;
 mod screens;
 mod theme;
 
@@ -74,6 +75,7 @@ impl Plugin for AppPlugin {
         app.add_plugins(HanabiPlugin);
         // Add other plugins.
         app.add_plugins((
+            physics::plugin,
             camera::plugin,
             asset_tracking::plugin,
             audio::plugin,

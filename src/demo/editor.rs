@@ -8,7 +8,11 @@ use crate::{
     camera::MainCamera, demo::particle::{particle_bundle, Particle}, Pause
 };
 
-use super::{level::obstacle, particle::ParticleAssets, player::player};
+use super::{
+    level::obstacle,
+    particle::{ParticleAssets, ParticleKind},
+    player::player,
+};
 // Removed atom::atom_seed import because the atom module does not exist or is not accessible.
 
 #[derive(States, Debug, Clone, Copy, Eq, PartialEq, Hash, Default)]
@@ -118,10 +122,12 @@ fn update_placement_preview(
                             cursor_pos,
                             false,
                             Particle {
+                                kind: ParticleKind::Normal,
                                 radius: editor_settings.atom_radius,
                                 initial_velocity: Vec2::ZERO,
                                 subparticles: vec![
                                     Particle {
+                                        kind: ParticleKind::Normal,
                                         radius: editor_settings.atom_radius,
                                         initial_velocity: vec2(0.0, -200.0),
                                         subparticles: vec![],
@@ -129,6 +135,7 @@ fn update_placement_preview(
                                         material: particle_material.clone(),
                                     },
                                     Particle {
+                                        kind: ParticleKind::Normal,
                                         radius: editor_settings.atom_radius,
                                         initial_velocity: vec2(0.0, 200.0),
                                         subparticles: vec![],
@@ -313,10 +320,12 @@ fn handle_editor_input(
                         world_position,
                         false,
                         Particle {
+                            kind: ParticleKind::Normal,
                             radius: editor_settings.atom_radius,
                             initial_velocity: Vec2::ZERO,
                             subparticles: vec![
                                 Particle {
+                                    kind: ParticleKind::Normal,
                                     radius: editor_settings.atom_radius,
                                     initial_velocity: vec2(0.0, -200.0),
                                     subparticles: vec![],
@@ -324,6 +333,7 @@ fn handle_editor_input(
                                     material: particle_material.clone(),
                                 },
                                 Particle {
+                                    kind: ParticleKind::Normal,
                                     radius: editor_settings.atom_radius,
                                     initial_velocity: vec2(0.0, 200.0),
                                     subparticles: vec![],

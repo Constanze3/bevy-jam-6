@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use bevy::{
-    ecs::{relationship::RelatedSpawner, spawn::SpawnWith},
+    ecs::{relationship::RelatedSpawner, spawn::SpawnWith, system::QueryLens},
     prelude::*,
 };
 use bevy_hanabi::{EffectProperties, EffectSpawner};
@@ -9,11 +9,18 @@ use bevy_mod_picking::{PickableBundle, prelude::On};
 use bevy_rapier2d::prelude::*;
 
 use crate::{
-    AppSystems, PausableSystems, asset_tracking::LoadResource, audio::sound_effect,
-    external::maybe::Maybe, screens::Screen,
+    AppSystems, PausableSystems,
+    asset_tracking::LoadResource,
+    audio::sound_effect,
+    external::maybe::Maybe,
+    physics::{CollisionHandlers, find_rigidbody_ancestor},
+    screens::Screen,
 };
 
-use super::player::{Player, TimeSpeed};
+use super::{
+    killer::Killer,
+    player::{Player, TimeSpeed},
+};
 
 const PARTICLE_LOCAL_Z: f32 = -2.0;
 const ARROWS_LOCAL_Z: f32 = -3.0;
@@ -24,16 +31,23 @@ pub(super) fn plugin(app: &mut App) {
 
     app.register_type::<Particle>();
 
+    app.add_event::<ParticleSplitEvent>();
+
     app.add_systems(
         PostUpdate,
-        particle_collision_handler
-            .in_set(PausableSystems)
-            .after(PhysicsSet::Writeback),
+        (
+            particle_collision_handler
+                .in_set(CollisionHandlers)
+                .in_set(PausableSystems)
+                .run_if(in_state(Screen::Gameplay)),
+            split_particle
+                .after(CollisionHandlers)
+                .run_if(in_state(Screen::Gameplay)),
+        ),
     );
 
     app.add_observer(player_particle_collision);
     app.add_observer(particle_particle_collision);
-    app.add_observer(split_particle);
 
     // Invincibility
 
@@ -100,9 +114,16 @@ impl FromWorld for ParticleAssets {
     }
 }
 
+#[derive(Debug, Clone, Reflect, PartialEq, Eq)]
+pub enum ParticleKind {
+    Normal,
+    Killer,
+}
+
 #[derive(Component, Debug, Clone, Reflect)]
 #[reflect(no_field_bounds)]
 pub struct Particle {
+    pub kind: ParticleKind,
     pub radius: f32,
     pub initial_velocity: Vec2,
     pub subparticles: Vec<Particle>,
@@ -214,19 +235,20 @@ pub fn particle_bundle(
                         Some(CollisionGroups::new(Group::GROUP_3, Group::GROUP_1))
                     }
                 }),
-                particle
+                Maybe((particle.kind == ParticleKind::Killer).then_some(Killer)),
+                particle,
             )
         ],
     )
 }
 
 // System that triggers specialized collision events.
-fn particle_collision_handler(
+pub fn particle_collision_handler(
     mut collision_events: EventReader<CollisionEvent>,
-    query: Query<(
-        Option<&RigidBody>,
+    mut query: Query<(
         Option<&Particle>,
         Option<&Player>,
+        Option<&RigidBody>,
         &ChildOf,
     )>,
     mut commands: Commands,
@@ -236,30 +258,13 @@ fn particle_collision_handler(
             return;
         };
 
-        // This helper closure traverses the hierarchy from the given entity until the first one
-        // with a rigid body and returns its entity id and possibly existing player and particle
-        // components.
-        let helper = |mut entity: Entity| -> Option<(Entity, Option<&Player>, Option<&Particle>)> {
-            loop {
-                let Ok((rigid_body, particle, player, parent)) = query.get(entity) else {
-                    return None;
-                };
+        let mut helper_lens: QueryLens<(Option<&RigidBody>, &ChildOf)> = query.transmute_lens();
+        let helper_query = helper_lens.query();
+        let e1 = find_rigidbody_ancestor(e1, &helper_query).unwrap();
+        let e2 = find_rigidbody_ancestor(e2, &helper_query).unwrap();
 
-                if rigid_body.is_some() {
-                    return Some((entity, player, particle));
-                }
-
-                entity = parent.0;
-            }
-        };
-
-        let Some((e1, e1_player, e1_particle)) = helper(e1) else {
-            return;
-        };
-
-        let Some((e2, e2_player, e2_particle)) = helper(e2) else {
-            return;
-        };
+        let (e1_particle, e1_player, _, _) = query.get(e1).unwrap();
+        let (e2_particle, e2_player, _, _) = query.get(e2).unwrap();
 
         if e1_player.is_some() && e2_particle.is_some() {
             commands.trigger(PlayerParticleCollisionEvent { particle: e2 });
@@ -294,6 +299,7 @@ fn player_particle_collision(
     mut timestep_mode: ResMut<TimestepMode>,
     time_speed: Res<TimeSpeed>,
     particle_assets: Res<ParticleAssets>,
+    mut events: EventWriter<ParticleSplitEvent>,
     mut commands: Commands,
 ) {
     let invincible = particle_query.get(trigger.particle).unwrap();
@@ -310,8 +316,7 @@ fn player_particle_collision(
         *time_scale = time_speed.slow;
     }
 
-    commands.trigger(ParticleSplitEvent(trigger.particle));
-
+    events.write(ParticleSplitEvent(trigger.particle));
     commands.spawn(sound_effect(particle_assets.pop_sound.clone()));
 }
 
@@ -324,10 +329,11 @@ pub struct ParticleParticleCollisionEvent {
 fn particle_particle_collision(
     trigger: Trigger<ParticleParticleCollisionEvent>,
     particle_assets: Res<ParticleAssets>,
+    mut events: EventWriter<ParticleSplitEvent>,
     mut commands: Commands,
 ) {
-    commands.trigger(ParticleSplitEvent(trigger.particle1));
-    commands.trigger(ParticleSplitEvent(trigger.particle2));
+    events.write(ParticleSplitEvent(trigger.particle1));
+    events.write(ParticleSplitEvent(trigger.particle2));
 
     commands.spawn(sound_effect(particle_assets.pop_sound.clone()));
 }
@@ -336,7 +342,7 @@ fn particle_particle_collision(
 pub struct ParticleSplitEvent(pub Entity);
 
 fn split_particle(
-    trigger: Trigger<ParticleSplitEvent>,
+    mut events: EventReader<ParticleSplitEvent>,
     mut particle_query: Query<
         (Option<&Invincible>, &ChildOf, &Transform, &mut Particle),
         Without<Player>,
@@ -350,12 +356,15 @@ fn split_particle(
         Without<Particle>,
     >,
 ) {
-    let (invincible, bundle, transform, mut particle) = particle_query.get_mut(trigger.0).unwrap();
-    let bundle = bundle.0;
+    for event in events.read() {
+        let (invincible, bundle, transform, mut particle) =
+            particle_query.get_mut(event.0).unwrap();
 
-    if invincible.is_some() {
-        return;
-    }
+        let bundle = bundle.0;
+
+        if invincible.is_some() {
+            return;
+        }
     let Ok((mut properties, mut effect_spawner, mut effect_transform)) = effect.get_single_mut()
     else {
         return;
@@ -375,24 +384,25 @@ fn split_particle(
     // Spawn the particles
     effect_spawner.reset();
 
-    let player = player_query.single().unwrap();
+        let player = player_query.single().unwrap();
 
-    let parent = parent_query.get(bundle).unwrap();
+            let parent = parent_query.get(bundle).unwrap();
 
-    let sub_particles = std::mem::take(&mut particle.subparticles);
-    for sub_particle in sub_particles {
-        let offset_distance = particle.radius + 2.0 * player.radius + sub_particle.radius;
-        let offset = sub_particle.initial_velocity.normalize() * offset_distance;
+        let sub_particles = std::mem::take(&mut particle.subparticles);
+        for sub_particle in sub_particles {
+            let offset_distance = particle.radius + 2.0 * player.radius + sub_particle.radius;
+            let offset = sub_particle.initial_velocity.normalize() * offset_distance;
 
-        let spawn_position = position.xy() + offset;
-        commands.spawn((
-            particle_bundle(spawn_position, true, sub_particle, particle_assets.as_ref()),
-            // The subparticle will have the same parent as the particle if it has a parent.
-            Maybe(parent.map(|parent| ChildOf(parent.0))),
-        ));
+            let spawn_position = position.xy() + offset;
+            commands.spawn((
+                particle_bundle(spawn_position, true, sub_particle, particle_assets.as_ref()),
+                // The subparticle will have the same parent as the particle if it has a parent.
+                Maybe(parent.map(|parent| ChildOf(parent.0))),
+            ));
+        }
+
+        commands.entity(bundle).despawn();
     }
-
-    commands.entity(bundle).despawn();
 }
 
 fn setup_invincibility(

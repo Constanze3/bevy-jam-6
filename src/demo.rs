@@ -8,6 +8,7 @@ use bevy::prelude::*;
 pub mod editor;
 mod indicator;
 mod input;
+mod killer;
 pub mod level;
 mod particle;
 pub mod player;
@@ -21,5 +22,6 @@ pub(super) fn plugin(app: &mut App) {
         indicator::plugin,
         particle::plugin,
         editor::plugin,
+        killer::plugin,
     ));
 }
