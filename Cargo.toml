@@ -21,6 +21,7 @@ bevy_rapier2d = "0.30.0"
 bevy-inspector-egui = "0.31.0"
 bevy_asset_loader = "0.23"
 bevy_mod_picking = "0.20.1"
+bevy_hanabi = "0.16"
 
 
 # Your web builds will start failing if you add a dependency that pulls in `getrandom` v0.3+.

@@ -4,7 +4,8 @@ use bevy::{
     ecs::{relationship::RelatedSpawner, spawn::SpawnWith},
     prelude::*,
 };
-use bevy_mod_picking::{prelude::On, PickableBundle};
+use bevy_hanabi::{EffectProperties, EffectSpawner};
+use bevy_mod_picking::{PickableBundle, prelude::On};
 use bevy_rapier2d::prelude::*;
 
 use crate::{
@@ -344,6 +345,10 @@ fn split_particle(
     player_query: Query<&Player>,
     mut commands: Commands,
     particle_assets: Res<ParticleAssets>,
+    mut effect: Query<
+        (&mut EffectProperties, &mut EffectSpawner, &mut Transform),
+        Without<Particle>,
+    >,
 ) {
     let (invincible, bundle, transform, mut particle) = particle_query.get_mut(trigger.0).unwrap();
     let bundle = bundle.0;
@@ -351,10 +356,27 @@ fn split_particle(
     if invincible.is_some() {
         return;
     }
+    let Ok((mut properties, mut effect_spawner, mut effect_transform)) = effect.get_single_mut()
+    else {
+        return;
+    };
+    let position = transform.translation;
+    // This isn't the most accurate place to spawn the particle effect,
+    // but this is just for demonstration, so whatever.
+    effect_transform.translation = position;
+
+    // Pick a random particle color
+    let r = rand::random::<u8>();
+    let g = rand::random::<u8>();
+    let b = rand::random::<u8>();
+    let color = 0xFF000000u32 | (b as u32) << 16 | (g as u32) << 8 | (r as u32);
+    properties.set("spawn_color", color.into());
+
+    // Spawn the particles
+    effect_spawner.reset();
 
     let player = player_query.single().unwrap();
 
-    let position = transform.translation;
     let parent = parent_query.get(bundle).unwrap();
 
     let sub_particles = std::mem::take(&mut particle.subparticles);

@@ -15,8 +15,11 @@ mod screens;
 mod theme;
 
 use bevy::{asset::AssetMetaCheck, prelude::*};
+use bevy_hanabi::HanabiPlugin;
 use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
 use bevy_rapier2d::{prelude::*, rapier::prelude::IntegrationParameters};
+
+use crate::demo::particle_effect::ParticleEffectPlugin;
 
 fn main() -> AppExit {
     App::new().add_plugins(AppPlugin).run()
@@ -68,6 +71,7 @@ impl Plugin for AppPlugin {
         });
         app.add_plugins(WorldInspectorPlugin::new());
 
+        app.add_plugins(HanabiPlugin);
         // Add other plugins.
         app.add_plugins((
             camera::plugin,
@@ -79,6 +83,7 @@ impl Plugin for AppPlugin {
             menus::plugin,
             screens::plugin,
             theme::plugin,
+            ParticleEffectPlugin,
         ));
 
         // Order new `AppSystems` variants by adding them here:
