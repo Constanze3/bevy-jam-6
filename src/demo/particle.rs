@@ -157,7 +157,7 @@ pub fn particle_bundle(
         Name::new("Particle Bundle"),
         Transform::default(),
         Visibility::default(),
-        PickableBundle::default(), // <- Makes the mesh pickable.
+        // PickableBundle::default(),
         children![
             (
                 Name::new("Arrows"),
