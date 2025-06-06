@@ -69,6 +69,7 @@ impl Default for TimeSpeed {
 
 /// The player character.
 pub fn player(
+    translation: Vec2,
     radius: f32,
     force_scalar: f32,
     meshes: &mut ResMut<Assets<Mesh>>,
@@ -79,6 +80,7 @@ pub fn player(
 
     (
         Name::new("Player"),
+        Transform::from_translation(translation.extend(0.0)),
         Player {
             radius,
             force_scalar,
@@ -87,7 +89,6 @@ pub fn player(
         (
             Mesh2d(mesh),
             MeshMaterial2d(material),
-            Transform::default(),
             RigidBody::Dynamic,
             Ccd::enabled(),
             Sleeping::disabled(),

@@ -1,12 +1,11 @@
-use bevy::{ecs::world, prelude::*};
+use bevy::prelude::*;
 use bevy_inspector_egui::{
     bevy_egui::{EguiContextPass, EguiContexts},
     egui,
 };
 
 use crate::{
-    Pause,
-    demo::particle::{Particle, particle_bundle},
+    camera::MainCamera, demo::particle::{particle_bundle, Particle}, Pause
 };
 
 use super::{level::obstacle, particle::ParticleAssets, player::player};
@@ -18,7 +17,6 @@ pub enum EditorState {
     Disabled,
     Enabled,
 }
-
 #[derive(Resource)]
 pub struct EditorSettings {
     selected_tool: EditorTool,
@@ -79,7 +77,7 @@ fn update_placement_preview(
     mut placement_state: ResMut<PlacementState>,
     editor_settings: Res<EditorSettings>,
     windows: Query<&Window>,
-    camera_q: Query<(&Camera, &GlobalTransform), With<Camera2d>>,
+    camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     particle_assets: Res<ParticleAssets>,
@@ -117,7 +115,7 @@ fn update_placement_preview(
                 let entity = match tool {
                     EditorTool::PlaceAtom => {
                         let bundle = particle_bundle(
-                            vec2(-100.0, 0.0),
+                            cursor_pos,
                             false,
                             Particle {
                                 radius: editor_settings.atom_radius,
@@ -155,7 +153,7 @@ fn update_placement_preview(
                         commands.spawn((bundle, Name::new("Preview"))).id()
                     }
                     EditorTool::PlacePlayer => {
-                        let bundle = player(20.0, 7000.0, &mut meshes, &mut materials);
+                        let bundle = player(cursor_pos, 20.0, 7000.0, &mut meshes, &mut materials);
                         commands.spawn((bundle, Name::new("Preview"))).id()
                     }
                     _ => return,
@@ -271,7 +269,7 @@ fn handle_editor_input(
     mut commands: Commands,
     buttons: Res<ButtonInput<MouseButton>>,
     windows: Query<&Window>,
-    camera_q: Query<(&Camera, &GlobalTransform), With<Camera2d>>,
+    camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     editor_settings: Res<EditorSettings>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
@@ -349,7 +347,7 @@ fn handle_editor_input(
                     ));
                 }
                 EditorTool::PlacePlayer => {
-                    commands.spawn(player(20.0, 7000.0, &mut meshes, &mut materials));
+                    commands.spawn(player(world_position, 20.0, 7000.0, &mut meshes, &mut materials));
                 }
                 EditorTool::Select => {
                     // TODO: Implement selection

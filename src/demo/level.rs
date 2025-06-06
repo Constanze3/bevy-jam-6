@@ -88,7 +88,7 @@ pub fn spawn_level(
         Visibility::default(),
         StateScoped(Screen::Gameplay),
         children![
-            player(20.0, 7000.0, &mut meshes, &mut materials),
+            player(Vec2::new(0.0, -100.0), 20.0, 7000.0, &mut meshes, &mut materials),
             drag_indicator(
                 6.0,
                 0.4,
