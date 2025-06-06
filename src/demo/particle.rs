@@ -365,28 +365,29 @@ fn split_particle(
         if invincible.is_some() {
             return;
         }
-    let Ok((mut properties, mut effect_spawner, mut effect_transform)) = effect.get_single_mut()
-    else {
-        return;
-    };
-    let position = transform.translation;
-    // This isn't the most accurate place to spawn the particle effect,
-    // but this is just for demonstration, so whatever.
-    effect_transform.translation = position;
+        let Ok((mut properties, mut effect_spawner, mut effect_transform)) =
+            effect.get_single_mut()
+        else {
+            return;
+        };
+        let position = transform.translation;
+        // This isn't the most accurate place to spawn the particle effect,
+        // but this is just for demonstration, so whatever.
+        effect_transform.translation = position;
 
-    // Pick a random particle color
-    let r = rand::random::<u8>();
-    let g = rand::random::<u8>();
-    let b = rand::random::<u8>();
-    let color = 0xFF000000u32 | (b as u32) << 16 | (g as u32) << 8 | (r as u32);
-    properties.set("spawn_color", color.into());
+        // Pick a random particle color
+        let r = rand::random::<u8>();
+        let g = rand::random::<u8>();
+        let b = rand::random::<u8>();
+        let color = 0xFF000000u32 | (b as u32) << 16 | (g as u32) << 8 | (r as u32);
+        properties.set("spawn_color", color.into());
 
-    // Spawn the particles
-    effect_spawner.reset();
+        // Spawn the particles
+        effect_spawner.reset();
 
         let player = player_query.single().unwrap();
 
-            let parent = parent_query.get(bundle).unwrap();
+        let parent = parent_query.get(bundle).unwrap();
 
         let sub_particles = std::mem::take(&mut particle.subparticles);
         for sub_particle in sub_particles {
