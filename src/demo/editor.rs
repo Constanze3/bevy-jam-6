@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::world, prelude::*};
 use bevy_inspector_egui::{
     bevy_egui::{EguiContextPass, EguiContexts},
     egui,
@@ -312,7 +312,7 @@ fn handle_editor_input(
                     let particle_material = materials.add(color);
 
                     let bundle = particle_bundle(
-                        vec2(-100.0, 0.0),
+                        world_position,
                         false,
                         Particle {
                             radius: editor_settings.atom_radius,

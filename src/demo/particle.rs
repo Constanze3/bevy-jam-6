@@ -4,6 +4,7 @@ use bevy::{
     ecs::{relationship::RelatedSpawner, spawn::SpawnWith},
     prelude::*,
 };
+use bevy_mod_picking::{prelude::On, PickableBundle};
 use bevy_rapier2d::prelude::*;
 
 use crate::{
@@ -156,6 +157,7 @@ pub fn particle_bundle(
         Name::new("Particle Bundle"),
         Transform::default(),
         Visibility::default(),
+        PickableBundle::default(), // <- Makes the mesh pickable.
         children![
             (
                 Name::new("Arrows"),

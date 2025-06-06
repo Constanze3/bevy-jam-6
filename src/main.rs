@@ -16,6 +16,7 @@ mod theme;
 
 use bevy::{asset::AssetMetaCheck, prelude::*};
 use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
+use bevy_mod_picking::debug::DebugPickingMode;
 use bevy_rapier2d::{prelude::*, rapier::prelude::IntegrationParameters};
 
 fn main() -> AppExit {
@@ -45,6 +46,7 @@ impl Plugin for AppPlugin {
                     .into(),
                     ..default()
                 }),
+            DefaultPickingPlugins,
             RapierPhysicsPlugin::<NoUserData>::default()
                 .with_custom_initialization(
                     RapierContextInitialization::InitializeDefaultRapierContext {
@@ -129,6 +131,7 @@ impl Plugin for AppPlugin {
             time_scale: 1.0,
             substeps: 2,
         });
+
     }
 }
 
