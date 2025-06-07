@@ -157,7 +157,6 @@ fn spawn_camera(
                 height: Val::Px(size.height),
                 ..default()
             },
-            BackgroundColor(Color::srgb(1.0, 0.0, 0.0)),
             children![ImageNode::new(image_handle)]
         )],
         RenderLayers::layer(1),
