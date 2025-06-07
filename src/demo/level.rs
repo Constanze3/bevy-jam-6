@@ -9,10 +9,13 @@ use crate::{
     audio::music::{GameplayMusic, MusicAssets, gameplay_music},
     camera::Letterboxing,
     demo::player::player,
+    external::maybe::Maybe,
     screens::Screen,
 };
 
-use super::{indicator::drag_indicator, level_loading::LevelData, particle::SpawnParticle};
+use super::{
+    indicator::drag_indicator, killer::Killer, level_data::LevelData, particle::SpawnParticle,
+};
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<LevelAssets>();
@@ -109,8 +112,10 @@ pub fn spawn_level(
                 material,
                 mesh,
                 obstacle_data.collider,
+                obstacle_data.is_killer,
             ))
             .id();
+
         commands.entity(level).add_child(obstacle);
     }
 
@@ -129,6 +134,7 @@ pub fn obstacle(
     material: Handle<ColorMaterial>,
     mesh: Handle<Mesh>,
     collider: Collider,
+    is_killer: bool,
 ) -> impl Bundle {
     (
         Name::new("Obstacle"),
@@ -137,7 +143,14 @@ pub fn obstacle(
         MeshMaterial2d(material),
         RigidBody::Fixed,
         collider,
-        CollisionGroups::new(Group::GROUP_1, Group::all()),
+        {
+            if !is_killer {
+                CollisionGroups::new(Group::GROUP_1, Group::all())
+            } else {
+                CollisionGroups::new(Group::GROUP_1 | Group::GROUP_3, Group::all())
+            }
+        },
+        Maybe(is_killer.then_some(Killer)),
     )
 }
 

@@ -16,11 +16,10 @@ mod screens;
 mod theme;
 
 use bevy::{asset::AssetMetaCheck, prelude::*};
-use bevy_hanabi::HanabiPlugin;
-use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
+// use bevy_hanabi::HanabiPlugin;
 use bevy_rapier2d::{prelude::*, rapier::prelude::IntegrationParameters};
 
-use crate::demo::particle_effect::ParticleEffectPlugin;
+// use crate::demo::particle_effect::ParticleEffectPlugin;
 
 fn main() -> AppExit {
     App::new().add_plugins(AppPlugin).run()
@@ -63,16 +62,9 @@ impl Plugin for AppPlugin {
                     },
                 )
                 .with_default_system_setup(false),
-            RapierDebugRenderPlugin::default(),
         ));
 
-        // Development plugins.
-        app.add_plugins(EguiPlugin {
-            enable_multipass_for_primary_context: true,
-        });
-        app.add_plugins(WorldInspectorPlugin::new());
-
-        app.add_plugins(HanabiPlugin);
+        // app.add_plugins(HanabiPlugin);
         // Add other plugins.
         app.add_plugins((
             physics::plugin,
@@ -85,7 +77,7 @@ impl Plugin for AppPlugin {
             menus::plugin,
             screens::plugin,
             theme::plugin,
-            ParticleEffectPlugin,
+            // ParticleEffectPlugin,
         ));
 
         // Order new `AppSystems` variants by adding them here:

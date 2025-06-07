@@ -6,7 +6,7 @@ use bevy::{
 use bevy_rapier2d::prelude::Collider;
 use serde::{Deserialize, Serialize};
 
-use super::particle::Particle;
+use super::particle::{Particle, ParticleKind};
 
 #[derive(Serialize, Deserialize)]
 pub struct FlatColorMesh {
@@ -78,14 +78,22 @@ pub struct ObstacleData {
     pub transform: Transform,
     pub flat_color_mesh: FlatColorMesh,
     pub collider: Collider,
+    pub is_killer: bool,
 }
 
 impl ObstacleData {
-    pub fn rectangle(transform: Transform, color: Color, width: f32, height: f32) -> Self {
+    pub fn rectangle(
+        transform: Transform,
+        color: Color,
+        width: f32,
+        height: f32,
+        killer: bool,
+    ) -> Self {
         Self {
             transform,
             flat_color_mesh: FlatColorMesh::new(color, Rectangle::new(width, height)),
             collider: Collider::cuboid(width / 2.0, height / 2.0),
+            is_killer: killer,
         }
     }
 }
@@ -104,37 +112,61 @@ impl LevelData {
         Self {
             name: String::from("Example"),
             author: None,
-            particles: vec![ParticleData::new(
-                vec2(-100.0, 0.0),
-                Particle {
-                    subparticles: vec![
-                        Box::new(Particle {
-                            initial_velocity: vec2(0.0, -200.0),
-                            ..default()
-                        }),
-                        Box::new(Particle {
-                            initial_velocity: vec2(0.0, 200.0),
-                            ..default()
-                        }),
-                    ],
-                    ..default()
-                },
-            )],
+            particles: vec![
+                ParticleData::new(
+                    vec2(-100.0, 0.0),
+                    Particle {
+                        subparticles: vec![
+                            Box::new(Particle {
+                                initial_velocity: vec2(0.0, -200.0),
+                                subparticles: vec![
+                                    Box::new(Particle {
+                                        initial_velocity: vec2(200.0, 0.0),
+                                        ..default()
+                                    }),
+                                    Box::new(Particle {
+                                        initial_velocity: vec2(-200.0, 0.0),
+                                        ..default()
+                                    }),
+                                ],
+                                ..default()
+                            }),
+                            Box::new(Particle {
+                                kind: ParticleKind::Killer,
+                                radius: 40.0,
+                                initial_velocity: vec2(0.0, 200.0),
+                                color: Color::srgb(1.0, 0.0, 0.0),
+                                ..default()
+                            }),
+                        ],
+                        ..default()
+                    },
+                ),
+                ParticleData::new(
+                    vec2(-300.0, 0.0),
+                    Particle {
+                        subparticles: vec![
+                            Box::new(Particle {
+                                initial_velocity: vec2(0.0, -200.0),
+                                ..default()
+                            }),
+                            Box::new(Particle {
+                                initial_velocity: vec2(0.0, 200.0),
+                                ..default()
+                            }),
+                        ],
+                        ..default()
+                    },
+                ),
+            ],
             obstacles: vec![ObstacleData::rectangle(
                 Transform::from_translation(vec3(100.0, 0.0, 0.0)),
                 Color::linear_rgb(1.0, 1.0, 1.0),
                 50.0,
                 50.0,
+                false,
             )],
             player_spawn: vec2(0.0, 0.0),
         }
     }
 }
-
-// impl FromWorld for LevelData {
-//     fn from_world(world: &mut World) -> Self {
-//         let assets = world.resource::<AssetServer>();
-//
-//         Self {}
-//     }
-// }

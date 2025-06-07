@@ -5,7 +5,7 @@ use bevy::{
     ecs::{relationship::RelatedSpawner, spawn::SpawnWith, system::QueryLens},
     prelude::*,
 };
-use bevy_hanabi::{EffectProperties, EffectSpawner};
+// use bevy_hanabi::{EffectProperties, EffectSpawner};
 use bevy_rapier2d::prelude::*;
 use invincible::{Invincible, InvincibleRemoved};
 use serde::{Deserialize, Serialize};
@@ -322,10 +322,10 @@ fn split_particle(
     >,
     player_query: Query<&Player>,
     mut commands: Commands,
-    mut effect: Query<
-        (&mut EffectProperties, &mut EffectSpawner, &mut Transform),
-        Without<Particle>,
-    >,
+    // mut effect: Query<
+    //     (&mut EffectProperties, &mut EffectSpawner, &mut Transform),
+    //     Without<Particle>,
+    // >,
 ) {
     for event in events.read() {
         let (entity, invincible, transform, mut particle, parent) =
@@ -335,25 +335,26 @@ fn split_particle(
             return;
         }
 
-        let Ok((mut properties, mut effect_spawner, mut effect_transform)) = effect.single_mut()
-        else {
-            return;
-        };
-
         let position = transform.translation;
-        // This isn't the most accurate place to spawn the particle effect,
-        // but this is just for demonstration, so whatever.
-        effect_transform.translation = position;
 
-        // Pick a random particle color
-        let r = rand::random::<u8>();
-        let g = rand::random::<u8>();
-        let b = rand::random::<u8>();
-        let color = 0xFF000000u32 | (b as u32) << 16 | (g as u32) << 8 | (r as u32);
-        properties.set("spawn_color", color.into());
+        // let Ok((mut properties, mut effect_spawner, mut effect_transform)) = effect.single_mut()
+        // else {
+        //     return;
+        // };
 
-        // Spawn the particles
-        effect_spawner.reset();
+        // // This isn't the most accurate place to spawn the particle effect,
+        // // but this is just for demonstration, so whatever.
+        // effect_transform.translation = position;
+
+        // // Pick a random particle color
+        // let r = rand::random::<u8>();
+        // let g = rand::random::<u8>();
+        // let b = rand::random::<u8>();
+        // let color = 0xFF000000u32 | (b as u32) << 16 | (g as u32) << 8 | (r as u32);
+        // properties.set("spawn_color", color.into());
+
+        // // Spawn the particles
+        // effect_spawner.reset();
 
         let player = player_query.single().unwrap();
 

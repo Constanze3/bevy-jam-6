@@ -10,10 +10,11 @@ mod indicator;
 mod input;
 mod killer;
 pub mod level;
-pub mod level_loading;
+pub mod level_data;
 mod particle;
 pub mod particle_effect;
 pub mod player;
+pub mod levels_asset;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((
