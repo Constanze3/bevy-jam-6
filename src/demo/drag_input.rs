@@ -5,53 +5,53 @@ use crate::{
 use bevy::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
-    app.register_type::<InputController>();
-    app.init_resource::<InputController>();
-    app.load_resource::<InputAssets>();
+    app.register_type::<DragInputController>();
+    app.init_resource::<DragInputController>();
+    app.load_resource::<DragInputAssets>();
 
-    app.add_event::<InputEvent>();
+    app.add_event::<StretchInputEvent>();
 
     app.add_systems(
         Update,
-        record_input
+        record_drag_input
             .run_if(in_state(Screen::Gameplay))
             .in_set(AppSystems::RecordInput)
             .in_set(PausableSystems),
     );
 
-    app.add_systems(OnEnter(Pause(true)), reset_input);
+    app.add_systems(OnEnter(Pause(true)), reset_drag_input);
 }
 
 #[derive(Asset, Resource, Clone, Reflect)]
 #[reflect(Resource)]
-struct InputAssets {
+struct DragInputAssets {
     #[dependency]
-    stretch_sound: Handle<AudioSource>,
+    drag_sound: Handle<AudioSource>,
 }
 
-impl FromWorld for InputAssets {
+impl FromWorld for DragInputAssets {
     fn from_world(world: &mut World) -> Self {
         let assets = world.resource::<AssetServer>();
 
         Self {
-            stretch_sound: assets.load::<AudioSource>("audio/sound_effects/stretch.ogg"),
+            drag_sound: assets.load::<AudioSource>("audio/sound_effects/drag.ogg"),
         }
     }
 }
 
 #[derive(Component)]
-struct StretchSound;
+struct DragSound;
 
 #[derive(Resource, Reflect)]
 #[reflect(Resource)]
-pub struct InputController {
+pub struct DragInputController {
     pub initial_position: Option<Vec2>,
     pub vector: Option<Vec2>,
     pub min_length: f32,
     pub max_length: f32,
 }
 
-impl Default for InputController {
+impl Default for DragInputController {
     fn default() -> Self {
         Self {
             initial_position: None,
@@ -63,17 +63,17 @@ impl Default for InputController {
 }
 
 #[derive(Event)]
-pub struct InputEvent {
+pub struct StretchInputEvent {
     pub vector: Vec2,
 }
 
-fn record_input(
+fn record_drag_input(
     input: Res<ButtonInput<MouseButton>>,
-    mut input_controller: ResMut<InputController>,
+    mut input_controller: ResMut<DragInputController>,
     window_query: Query<&Window>,
-    mut events: EventWriter<InputEvent>,
-    input_assets: Res<InputAssets>,
-    stretch_sound_query: Query<Entity, With<StretchSound>>,
+    mut events: EventWriter<StretchInputEvent>,
+    input_assets: Res<DragInputAssets>,
+    drag_sound_query: Query<Entity, With<DragSound>>,
     mut commands: Commands,
 ) {
     let window = window_query.single().unwrap();
@@ -81,10 +81,7 @@ fn record_input(
     // Record initial mouse position.
     if input.just_pressed(MouseButton::Left) {
         input_controller.initial_position = window.cursor_position();
-        commands.spawn((
-            StretchSound,
-            sound_effect(input_assets.stretch_sound.clone()),
-        ));
+        commands.spawn((DragSound, sound_effect(input_assets.drag_sound.clone())));
     }
 
     // Update vector of input controller.
@@ -104,15 +101,15 @@ fn record_input(
 
     // Send input event.
     if input.just_released(MouseButton::Left) {
-        for stretch_sound in stretch_sound_query.iter() {
-            commands.entity(stretch_sound).despawn();
+        for drag_sound in drag_sound_query.iter() {
+            commands.entity(drag_sound).despawn();
         }
 
         let vector = calculate_vector(input_controller.initial_position, window.cursor_position());
 
         if let Some(vector) = vector {
             if input_controller.min_length <= vector.length() {
-                events.write(InputEvent { vector });
+                events.write(StretchInputEvent { vector });
             }
         }
 
@@ -138,6 +135,6 @@ fn calculate_vector(
     None
 }
 
-fn reset_input(mut input_controller: ResMut<InputController>) {
-    *input_controller = InputController::default();
+fn reset_drag_input(mut input_controller: ResMut<DragInputController>) {
+    *input_controller = DragInputController::default();
 }

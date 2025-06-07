@@ -9,7 +9,7 @@ pub mod level_data;
 pub mod level_loading;
 
 use crate::demo::{
-    indicator::drag_indicator, killer::Killer, particle::SpawnParticle, player::PlayerConfig,
+    drag_indicator::drag_indicator, killer::Killer, particle::SpawnParticle, player::PlayerConfig,
 };
 use crate::{
     AppSystems, PausableSystems,

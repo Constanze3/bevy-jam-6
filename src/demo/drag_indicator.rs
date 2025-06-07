@@ -4,7 +4,7 @@ use bevy_rapier2d::plugin::PhysicsSet;
 
 use crate::{PausableSystems, Pause};
 
-use super::input::InputController;
+use super::drag_input::DragInputController;
 use super::player::Player;
 
 pub(super) fn plugin(app: &mut App) {
@@ -54,7 +54,7 @@ pub struct DragIndicator {
 }
 
 fn update_drag_indicator(
-    input_controller: Res<InputController>,
+    input_controller: Res<DragInputController>,
     player_query: Query<(&Player, &Transform)>,
     mut indicator_query: Query<
         (

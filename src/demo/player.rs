@@ -13,7 +13,7 @@
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
-use super::input::InputEvent;
+use super::drag_input::StretchInputEvent;
 use crate::{
     AppSystems, PausableSystems, asset_tracking::LoadResource, audio::sound_effect, screens::Screen,
 };
@@ -131,7 +131,7 @@ pub struct Player {
 }
 
 fn handle_input(
-    mut events: EventReader<InputEvent>,
+    mut events: EventReader<StretchInputEvent>,
     mut query: Query<(&mut Player, &mut ExternalImpulse, &mut Velocity)>,
     mut timestep_mode: ResMut<TimestepMode>,
     time_speed: Res<TimeSpeed>,

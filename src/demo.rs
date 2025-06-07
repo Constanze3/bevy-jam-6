@@ -5,8 +5,8 @@
 
 use bevy::prelude::*;
 
-mod indicator;
-mod input;
+mod drag_indicator;
+mod drag_input;
 mod killer;
 pub mod level;
 mod particle;
@@ -17,8 +17,8 @@ pub(super) fn plugin(app: &mut App) {
     app.add_plugins((
         level::plugin,
         player::plugin,
-        input::plugin,
-        indicator::plugin,
+        drag_input::plugin,
+        drag_indicator::plugin,
         particle::plugin,
         killer::plugin,
     ));
