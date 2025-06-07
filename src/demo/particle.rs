@@ -418,7 +418,7 @@ fn invincibility_added(
         // Move particle back to collision group 2 so that it collides with the player.
         commands
             .entity(entity)
-            .remove::<CollisionGroups>()
+            .remove::<(CollisionGroups, Killer)>()
             .insert(CollisionGroups::new(
                 Group::GROUP_2,
                 Group::GROUP_1 | Group::GROUP_2,
@@ -443,6 +443,7 @@ fn invincibility_removed(
         commands
             .entity(entity)
             .remove::<CollisionGroups>()
-            .insert(CollisionGroups::new(Group::GROUP_3, Group::GROUP_1));
+            .insert(CollisionGroups::new(Group::GROUP_3, Group::GROUP_1))
+            .insert_if(Killer, || particle.kind == ParticleKind::Killer);
     }
 }
