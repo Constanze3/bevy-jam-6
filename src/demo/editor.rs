@@ -6,8 +6,6 @@ use bevy_inspector_egui::{
 
 use crate::{Pause, camera::MainCamera, screens::Screen};
 
-use super::player::player;
-
 pub(super) fn plugin(app: &mut App) {
     app.init_state::<EditorState>()
         .init_resource::<EditorSettings>()
@@ -347,13 +345,13 @@ fn handle_editor_input(
                     // ));
                 }
                 EditorTool::PlacePlayer => {
-                    commands.spawn(player(
-                        world_position,
-                        20.0,
-                        7000.0,
-                        &mut meshes,
-                        &mut materials,
-                    ));
+                    // commands.spawn(player(
+                    //     world_position,
+                    //     20.0,
+                    //     7000.0,
+                    //     &mut meshes,
+                    //     &mut materials,
+                    // ));
                 }
                 EditorTool::Select => {
                     // TODO: Implement selection

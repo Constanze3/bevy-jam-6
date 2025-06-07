@@ -8,6 +8,8 @@ use crate::{
     screens::Screen,
 };
 
+use super::player::TimeSpeed;
+
 pub(super) fn plugin(app: &mut App) {
     app.add_event::<KillEvent>();
 
@@ -67,8 +69,17 @@ fn killer_collision_handler(
     }
 }
 
-fn kill(mut events: EventReader<KillEvent>, mut commands: Commands) {
+fn kill(
+    mut events: EventReader<KillEvent>,
+    mut timestep_mode: ResMut<TimestepMode>,
+    time_speed: Res<TimeSpeed>,
+    mut commands: Commands,
+) {
     for event in events.read() {
         commands.entity(event.player).despawn();
+
+        if let TimestepMode::Variable { time_scale, .. } = timestep_mode.as_mut() {
+            *time_scale = time_speed.normal;
+        }
     }
 }

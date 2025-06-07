@@ -22,6 +22,7 @@ pub(super) fn plugin(app: &mut App) {
     app.register_type::<Player>();
     app.register_type::<TimeSpeed>();
 
+    app.init_resource::<PlayerConfig>();
     app.load_resource::<PlayerAssets>();
     app.init_resource::<TimeSpeed>();
 
@@ -32,6 +33,26 @@ pub(super) fn plugin(app: &mut App) {
             .in_set(PausableSystems)
             .run_if(in_state(Screen::Gameplay)),
     );
+}
+
+#[derive(Resource, Reflect)]
+#[reflect(Resource)]
+pub struct PlayerConfig {
+    pub local_z: f32,
+    pub radius: f32,
+    pub color: Color,
+    pub force_scalar: f32,
+}
+
+impl Default for PlayerConfig {
+    fn default() -> Self {
+        Self {
+            local_z: 0.0,
+            radius: 20.0,
+            color: Color::hsl(0.0, 0.95, 0.7),
+            force_scalar: 7000.0,
+        }
+    }
 }
 
 #[derive(Asset, Resource, Clone, Reflect)]
@@ -70,34 +91,29 @@ impl Default for TimeSpeed {
 /// The player character.
 pub fn player(
     translation: Vec2,
-    radius: f32,
-    force_scalar: f32,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<ColorMaterial>>,
+    player_config: &PlayerConfig,
 ) -> impl Bundle {
-    let mesh = meshes.add(Circle::new(radius));
-    let material = materials.add(Color::hsl(0.0, 0.95, 0.7));
+    let mesh = meshes.add(Circle::new(player_config.radius));
+    let material = materials.add(player_config.color);
 
     (
         Name::new("Player"),
         Transform::from_translation(translation.extend(0.0)),
-        Player {
-            radius,
-            force_scalar,
-            can_move: true,
-        },
+        Player { can_move: true },
         (
             Mesh2d(mesh),
             MeshMaterial2d(material),
             RigidBody::Dynamic,
             Ccd::enabled(),
             Sleeping::disabled(),
-            Collider::ball(radius),
+            Collider::ball(player_config.radius),
             children![(
                 Name::new("Player Sensor"),
                 ActiveEvents::COLLISION_EVENTS,
                 CollisionGroups::new(Group::GROUP_3, Group::GROUP_3),
-                Collider::ball(radius),
+                Collider::ball(player_config.radius),
                 Sensor
             )],
             CollisionGroups::new(Group::GROUP_2, Group::GROUP_1 | Group::GROUP_2),
@@ -111,8 +127,6 @@ pub fn player(
 #[derive(Component, Reflect)]
 #[reflect(Component)]
 pub struct Player {
-    pub radius: f32,
-    pub force_scalar: f32,
     pub can_move: bool,
 }
 
@@ -121,6 +135,7 @@ fn handle_input(
     mut query: Query<(&mut Player, &mut ExternalImpulse, &mut Velocity)>,
     mut timestep_mode: ResMut<TimestepMode>,
     time_speed: Res<TimeSpeed>,
+    player_config: Res<PlayerConfig>,
     player_assets: Res<PlayerAssets>,
     mut commands: Commands,
 ) {
@@ -136,7 +151,7 @@ fn handle_input(
 
     if let Some(event) = events.read().last() {
         velocity.linvel = Vec2::ZERO;
-        external_impulse.impulse = player.force_scalar * event.vector;
+        external_impulse.impulse = player_config.force_scalar * event.vector;
 
         commands.spawn(sound_effect(player_assets.shoot_sound.clone()));
 

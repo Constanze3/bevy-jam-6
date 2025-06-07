@@ -23,14 +23,25 @@ pub(super) fn plugin(app: &mut App) {
     // Toggle the debug overlay for UI.
     app.add_systems(
         Update,
-        (
-            toggle_debug_ui.run_if(input_just_pressed(TOGGLE_KEY)),
-            // debug_collision_events,
-        ),
+        toggle_debug_ui.run_if(input_just_pressed(TOGGLE_KEY)),
     );
+
+    // Print example level on startup.
+    app.add_systems(Startup, print_example_level);
+
+    // Debug collision events.
+    // app.add_systems(Update, debug_collision_events);
 }
 
 const TOGGLE_KEY: KeyCode = KeyCode::Backquote;
+
+fn print_example_level() {
+    let level_data = crate::demo::level_data::LevelData::example();
+    println!(
+        "{}",
+        ron::ser::to_string_pretty(&level_data, ron::ser::PrettyConfig::default()).unwrap(),
+    );
+}
 
 fn toggle_debug_ui(mut options: ResMut<UiDebugOptions>) {
     options.toggle();

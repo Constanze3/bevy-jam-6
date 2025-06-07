@@ -5,7 +5,6 @@
 
 use bevy::prelude::*;
 
-pub mod editor;
 mod indicator;
 mod input;
 mod killer;
@@ -23,7 +22,6 @@ pub(super) fn plugin(app: &mut App) {
         input::plugin,
         indicator::plugin,
         particle::plugin,
-        editor::plugin,
         killer::plugin,
     ));
 }

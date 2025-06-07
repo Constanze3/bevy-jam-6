@@ -1,6 +1,6 @@
 //! Spawn the main level.
 
-use bevy::prelude::*;
+use bevy::{asset::LoadedFolder, platform::collections::HashMap, prelude::*};
 use bevy_rapier2d::prelude::*;
 
 use crate::{
@@ -15,11 +15,14 @@ use crate::{
 
 use super::{
     indicator::drag_indicator, killer::Killer, level_data::LevelData, particle::SpawnParticle,
+    player::PlayerConfig,
 };
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<LevelAssets>();
-    app.load_resource::<LevelAssets>();
+
+    app.load_resource::<LevelFolders>();
+    app.add_systems(Update, initialize_level_assets);
 
     app.add_observer(spawn_level);
     app.add_systems(
@@ -31,33 +34,113 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-#[derive(Resource, Asset, Clone, Reflect)]
-#[reflect(Resource)]
-pub struct LevelAssets {
+#[derive(Resource, Asset, TypePath, Clone)]
+pub struct LevelFolders {
     #[dependency]
-    data: Vec<Handle<LevelData>>,
+    pub default: Handle<LoadedFolder>,
+    #[dependency]
+    pub custom: Handle<LoadedFolder>,
 }
 
-impl FromWorld for LevelAssets {
+impl FromWorld for LevelFolders {
     fn from_world(world: &mut World) -> Self {
         let assets = world.resource::<AssetServer>();
         Self {
-            data: vec![assets.load("levels/default/basic.ron")],
+            default: assets.load_folder("levels/default"),
+            custom: assets.load_folder("levels/custom"),
         }
     }
 }
 
-#[derive(Component)]
-pub struct Level;
+#[derive(Resource, Clone, Reflect)]
+#[reflect(Resource)]
+pub struct LevelAssets {
+    default: Vec<Handle<LevelData>>,
+    custom: HashMap<String, Handle<LevelData>>,
+}
+
+// Initializes the LevelAssets resource.
+fn initialize_level_assets(
+    mut events: EventReader<AssetEvent<LevelFolders>>,
+    mut commands: Commands,
+    level_folders: Res<Assets<LevelFolders>>,
+    loaded_folders: Res<Assets<LoadedFolder>>,
+    levels: Res<Assets<LevelData>>,
+) {
+    for event in events.read() {
+        if let AssetEvent::LoadedWithDependencies { id } = event {
+            let folder_handles = level_folders.get(*id).unwrap();
+
+            let default_folder = loaded_folders.get(&folder_handles.default).unwrap();
+            let custom_folder = loaded_folders.get(&folder_handles.custom).unwrap();
+
+            // Load default levels as a Vec<Handle<LevelData>>.
+            let map_default_folder = |folder: &LoadedFolder| {
+                let mut result = folder
+                    .handles
+                    .iter()
+                    .map(|h| h.clone().typed())
+                    .collect::<Vec<Handle<LevelData>>>();
+
+                // Each level should be named with numbers.
+                // This sorts them by their name.
+                result.sort_by(|h1, h2| {
+                    let parse_name = |level: &LevelData| {
+                        level
+                            .name
+                            .parse()
+                            .expect("Default level names should be numbers.")
+                    };
+
+                    let level1 = levels.get(h1).unwrap();
+                    let id1: usize = parse_name(level1);
+
+                    let level2 = levels.get(h2).unwrap();
+                    let id2: usize = parse_name(level2);
+
+                    id1.cmp(&id2)
+                });
+
+                result
+            };
+
+            // Load custom levels as a HashMap<String, Handle<LevelData>>.
+            let map_custom_folder = |folder: &LoadedFolder| {
+                folder
+                    .handles
+                    .iter()
+                    .map(|h| {
+                        let handle = h.clone().typed();
+                        let level = levels.get(&handle).unwrap();
+
+                        (level.name.clone(), handle)
+                    })
+                    .collect()
+            };
+
+            commands.insert_resource(LevelAssets {
+                default: map_default_folder(default_folder),
+                custom: map_custom_folder(custom_folder),
+            });
+        }
+    }
+}
+
+#[derive(Component, Clone)]
+pub enum Level {
+    Default(usize),
+    Custom(String),
+}
 
 #[derive(Event)]
-pub struct SpawnLevel;
+pub struct SpawnLevel(pub Level);
 
 /// A system that spawns the main level.
 pub fn spawn_level(
-    _: Trigger<SpawnLevel>,
+    trigger: Trigger<SpawnLevel>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    player_config: Res<PlayerConfig>,
     levels: Res<Assets<LevelData>>,
     level_assets: Res<LevelAssets>,
     music_query: Query<Entity, With<GameplayMusic>>,
@@ -66,32 +149,32 @@ pub fn spawn_level(
     mut commands: Commands,
 ) {
     // Spawn screen bounds first
-    commands.spawn(screen_bounds(letterboxing.as_ref()));
+    commands.spawn(screen_bounds(&letterboxing));
 
     if music_query.is_empty() {
-        commands.spawn((
-            gameplay_music(music_assets.as_ref()),
-            StateScoped(Screen::Gameplay),
-        ));
+        commands.spawn((gameplay_music(&music_assets), StateScoped(Screen::Gameplay)));
     }
 
-    let level_handle = level_assets.data.get(0).unwrap();
+    let level_handle = match &trigger.0 {
+        Level::Default(id) => level_assets.default.get(*id).unwrap(),
+        Level::Custom(name) => level_assets.custom.get(name).unwrap(),
+    };
+
     let level_data = levels.get(level_handle).unwrap();
 
     let level = commands
         .spawn((
             Name::new("Level"),
-            Level,
+            trigger.0.clone(),
             Transform::default(),
             Visibility::default(),
             StateScoped(Screen::Gameplay),
             children![
                 player(
                     level_data.player_spawn,
-                    20.0,
-                    7000.0,
                     &mut meshes,
-                    &mut materials
+                    &mut materials,
+                    &player_config
                 ),
                 drag_indicator(
                     6.0,
@@ -211,12 +294,12 @@ fn screen_bounds(letterboxing: &Letterboxing) -> impl Bundle {
 
 fn restart_level(
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    level_query: Query<Entity, With<Level>>,
+    level_query: Query<(Entity, &Level)>,
     mut commands: Commands,
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
-        let level = level_query.single().unwrap();
-        commands.entity(level).despawn();
-        commands.trigger(SpawnLevel);
+        let (entity, level) = level_query.single().unwrap();
+        commands.entity(entity).despawn();
+        commands.trigger(SpawnLevel(level.clone()));
     }
 }

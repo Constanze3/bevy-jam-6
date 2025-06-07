@@ -1,6 +1,5 @@
 //! The game's main screen states and transitions between them.
 
-mod editor;
 mod gameplay;
 mod loading;
 mod splash;
@@ -16,7 +15,6 @@ pub(super) fn plugin(app: &mut App) {
         loading::plugin,
         splash::plugin,
         title::plugin,
-        editor::plugin,
     ));
 }
 
@@ -29,5 +27,4 @@ pub enum Screen {
     Title,
     Loading,
     Gameplay,
-    Editor,
 }

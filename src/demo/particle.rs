@@ -21,7 +21,7 @@ use crate::{
 
 use super::{
     killer::Killer,
-    player::{Player, TimeSpeed},
+    player::{Player, PlayerConfig, TimeSpeed},
 };
 
 mod arrows;
@@ -71,7 +71,7 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-#[derive(Resource, Reflect, Serialize, Deserialize)]
+#[derive(Resource, Reflect)]
 #[reflect(Resource)]
 pub struct ParticleConfig {
     local_z: f32,
@@ -320,7 +320,7 @@ fn split_particle(
         ),
         Without<Player>,
     >,
-    player_query: Query<&Player>,
+    player_config: Res<PlayerConfig>,
     mut commands: Commands,
     // mut effect: Query<
     //     (&mut EffectProperties, &mut EffectSpawner, &mut Transform),
@@ -356,13 +356,11 @@ fn split_particle(
         // // Spawn the particles
         // effect_spawner.reset();
 
-        let player = player_query.single().unwrap();
-
         let sub_particles = std::mem::take(&mut particle.subparticles);
         for subparticle in sub_particles {
             let subparticle = *subparticle;
 
-            let offset_distance = particle.radius + 2.0 * player.radius + subparticle.radius;
+            let offset_distance = particle.radius + 2.0 * player_config.radius + subparticle.radius;
             let offset = subparticle.initial_velocity.normalize() * offset_distance;
 
             let spawn_position = position.xy() + offset;
@@ -401,11 +399,11 @@ fn spawn_particle(
             trigger.translation,
             std::mem::take(&mut trigger.particle),
             trigger.spawn_with_invincible,
-            particle_config.as_ref(),
+            &particle_config,
             meshes.as_mut(),
             materials.as_mut(),
-            arrows_config.as_ref(),
-            arrows_assets.as_ref(),
+            &arrows_config,
+            &arrows_assets,
         ),
         // The subparticle will have the same parent as the particle if it has a parent.
         Maybe(trigger.parent.map(|parent| ChildOf(parent))),

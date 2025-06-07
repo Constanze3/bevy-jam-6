@@ -209,4 +209,8 @@ impl AssetLoader for LevelDataLoader {
 
         Ok(level_data)
     }
+
+    fn extensions(&self) -> &[&str] {
+        &["ron"]
+    }
 }
