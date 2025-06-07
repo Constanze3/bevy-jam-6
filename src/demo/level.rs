@@ -12,10 +12,7 @@ use crate::{
     screens::Screen,
 };
 
-use super::{
-    indicator::drag_indicator,
-    particle::{Particle, SpawnParticle},
-};
+use super::{indicator::drag_indicator, level_loading::LevelData, particle::SpawnParticle};
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<LevelAssets>();
@@ -73,6 +70,8 @@ pub fn spawn_level(
         ));
     }
 
+    let level_data = LevelData::example();
+
     let level = commands
         .spawn((
             Name::new("Level"),
@@ -82,7 +81,7 @@ pub fn spawn_level(
             StateScoped(Screen::Gameplay),
             children![
                 player(
-                    Vec2::new(0.0, -100.0),
+                    level_data.player_spawn,
                     20.0,
                     7000.0,
                     &mut meshes,
@@ -96,46 +95,48 @@ pub fn spawn_level(
                     &mut meshes,
                     &mut materials
                 ),
-                obstacle(vec2(100.0, 0.0), 50.0, &mut meshes, &mut materials),
             ],
         ))
         .id();
 
-    commands.trigger(SpawnParticle {
-        translation: vec2(-100.0, 0.0),
-        particle: Particle {
-            subparticles: vec![
-                Box::new(Particle {
-                    initial_velocity: vec2(0.0, -200.0),
-                    ..default()
-                }),
-                Box::new(Particle {
-                    initial_velocity: vec2(0.0, 200.0),
-                    ..default()
-                }),
-            ],
-            ..default()
-        },
-        spawn_with_invincible: false,
-        parent: Some(level),
-    });
+    for obstacle_data in level_data.obstacles {
+        let material = materials.add(obstacle_data.flat_color_mesh.color());
+        let mesh = meshes.add(obstacle_data.flat_color_mesh.into_mesh());
+
+        let obstacle = commands
+            .spawn(obstacle(
+                obstacle_data.transform,
+                material,
+                mesh,
+                obstacle_data.collider,
+            ))
+            .id();
+        commands.entity(level).add_child(obstacle);
+    }
+
+    for particle_data in level_data.particles {
+        commands.trigger(SpawnParticle {
+            translation: particle_data.spawn_position,
+            particle: particle_data.particle,
+            spawn_with_invincible: false,
+            parent: Some(level),
+        });
+    }
 }
 
 pub fn obstacle(
-    translation: Vec2,
-    size: f32,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<ColorMaterial>,
+    transform: Transform,
+    material: Handle<ColorMaterial>,
+    mesh: Handle<Mesh>,
+    collider: Collider,
 ) -> impl Bundle {
-    let mesh = meshes.add(Rectangle::new(size, size));
-    let material = materials.add(Color::linear_rgb(1.0, 1.0, 1.0));
     (
         Name::new("Obstacle"),
-        Transform::from_translation(translation.extend(0.0)),
+        transform,
         Mesh2d(mesh),
         MeshMaterial2d(material),
         RigidBody::Fixed,
-        Collider::cuboid(size / 2.0, size / 2.0),
+        collider,
         CollisionGroups::new(Group::GROUP_1, Group::all()),
     )
 }

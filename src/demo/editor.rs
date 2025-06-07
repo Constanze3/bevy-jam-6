@@ -4,10 +4,28 @@ use bevy_inspector_egui::{
     egui,
 };
 
-use crate::{Pause, camera::MainCamera};
+use crate::{Pause, camera::MainCamera, screens::Screen};
 
-use super::{level::obstacle, player::player};
-// Removed atom::atom_seed import because the atom module does not exist or is not accessible.
+use super::player::player;
+
+pub(super) fn plugin(app: &mut App) {
+    app.init_state::<EditorState>()
+        .init_resource::<EditorSettings>()
+        .init_resource::<PlacementState>()
+        .add_systems(
+            EguiContextPass,
+            (
+                toggle_editor,
+                editor_ui.run_if(in_state(Screen::Editor)),
+                update_placement_preview.run_if(in_state(Screen::Editor)),
+            ),
+        );
+
+    app.add_systems(Update, handle_editor_input.run_if(in_state(Screen::Editor)));
+}
+
+#[derive(Event)]
+pub struct SpawnEditor;
 
 #[derive(States, Debug, Clone, Copy, Eq, PartialEq, Hash, Default)]
 pub enum EditorState {
@@ -49,25 +67,6 @@ pub enum EditorTool {
 pub struct PlacementState {
     pub preview_entity: Option<Entity>,
     pub placing: Option<EditorTool>,
-}
-
-pub(super) fn plugin(app: &mut App) {
-    app.init_state::<EditorState>()
-        .init_resource::<EditorSettings>()
-        .init_resource::<PlacementState>()
-        .add_systems(
-            EguiContextPass,
-            (
-                toggle_editor,
-                editor_ui.run_if(in_state(EditorState::Enabled)),
-                update_placement_preview.run_if(in_state(EditorState::Enabled)),
-            ),
-        );
-
-    app.add_systems(
-        Update,
-        handle_editor_input.run_if(in_state(EditorState::Enabled)),
-    );
 }
 
 fn update_placement_preview(
@@ -340,12 +339,12 @@ fn handle_editor_input(
                     // commands.spawn(bundle);
                 }
                 EditorTool::PlaceObstacle => {
-                    commands.spawn(obstacle(
-                        world_position,
-                        editor_settings.obstacle_size,
-                        &mut meshes,
-                        &mut materials,
-                    ));
+                    // commands.spawn(obstacle(
+                    //     world_position,
+                    //     editor_settings.obstacle_size,
+                    //     &mut meshes,
+                    //     &mut materials,
+                    // ));
                 }
                 EditorTool::PlacePlayer => {
                     commands.spawn(player(

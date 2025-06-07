@@ -16,6 +16,7 @@ fn spawn_main_menu(mut commands: Commands) {
         #[cfg(not(target_family = "wasm"))]
         children![
             widget::button("Play", enter_loading_or_gameplay_screen),
+            widget::button("Editor", enter_loading_or_editor_screen),
             widget::button("Settings", open_settings_menu),
             widget::button("Credits", open_credits_menu),
             widget::button("Exit", exit_app),
@@ -23,6 +24,7 @@ fn spawn_main_menu(mut commands: Commands) {
         #[cfg(target_family = "wasm")]
         children![
             widget::button("Play", enter_loading_or_gameplay_screen),
+            widget::button("Editor", enter_loading_or_editor_screen),
             widget::button("Settings", open_settings_menu),
             widget::button("Credits", open_credits_menu),
         ],
@@ -36,6 +38,18 @@ fn enter_loading_or_gameplay_screen(
 ) {
     if resource_handles.is_all_done() {
         next_screen.set(Screen::Gameplay);
+    } else {
+        next_screen.set(Screen::Loading);
+    }
+}
+
+fn enter_loading_or_editor_screen(
+    _: Trigger<Pointer<Click>>,
+    resource_handles: Res<ResourceHandles>,
+    mut next_screen: ResMut<NextState<Screen>>,
+) {
+    if resource_handles.is_all_done() {
+        next_screen.set(Screen::Editor);
     } else {
         next_screen.set(Screen::Loading);
     }

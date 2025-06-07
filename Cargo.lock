@@ -304,6 +304,9 @@ name = "arrayvec"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "as-raw-xcb-connection"
@@ -546,6 +549,7 @@ dependencies = [
  "bevy_rapier2d",
  "log",
  "rand",
+ "ron 0.10.1",
  "serde",
  "tracing",
 ]
@@ -601,7 +605,7 @@ dependencies = [
  "downcast-rs 2.0.1",
  "either",
  "petgraph 0.7.1",
- "ron",
+ "ron 0.8.1",
  "serde",
  "smallvec",
  "thiserror 2.0.12",
@@ -674,7 +678,7 @@ dependencies = [
  "futures-lite",
  "js-sys",
  "parking_lot",
- "ron",
+ "ron 0.8.1",
  "serde",
  "thiserror 1.0.69",
  "uuid",
@@ -713,7 +717,7 @@ dependencies = [
  "js-sys",
  "notify-debouncer-full",
  "parking_lot",
- "ron",
+ "ron 0.8.1",
  "serde",
  "stackfuture",
  "thiserror 2.0.12",
@@ -1233,7 +1237,7 @@ dependencies = [
  "naga_oil 0.17.1",
  "rand",
  "rand_pcg",
- "ron",
+ "ron 0.8.1",
  "serde",
  "thiserror 2.0.12",
  "typetag",
@@ -1807,6 +1811,7 @@ dependencies = [
  "log",
  "nalgebra",
  "rapier2d",
+ "serde",
 ]
 
 [[package]]
@@ -2506,6 +2511,9 @@ name = "bit-vec"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5e764a1d40d510daf35e07be9eb06e75770908c27d411ee6c92109c9840eaaf7"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "bit_field"
@@ -4552,6 +4560,7 @@ dependencies = [
  "num-complex",
  "num-rational",
  "num-traits",
+ "serde",
  "simba",
  "typenum",
 ]
@@ -4752,6 +4761,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73f88a1307638156682bada9d7604135552957b7818057dcef22705b4d509495"
 dependencies = [
  "num-traits",
+ "serde",
 ]
 
 [[package]]
@@ -5232,6 +5242,7 @@ dependencies = [
  "num-derive",
  "num-traits",
  "ordered-float 5.0.0",
+ "serde",
  "simba",
  "slab",
  "spade",
@@ -5561,6 +5572,7 @@ dependencies = [
  "parry2d",
  "profiling",
  "rustc-hash 2.1.1",
+ "serde",
  "simba",
  "thiserror 2.0.12",
 ]
@@ -5763,6 +5775,19 @@ dependencies = [
  "bitflags 2.9.1",
  "serde",
  "serde_derive",
+]
+
+[[package]]
+name = "ron"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "beceb6f7bf81c73e73aeef6dd1356d9a1b2b4909e1f0fc3e59b034f9572d7b7f"
+dependencies = [
+ "base64 0.22.1",
+ "bitflags 2.9.1",
+ "serde",
+ "serde_derive",
+ "unicode-ident",
 ]
 
 [[package]]
@@ -6066,6 +6091,7 @@ dependencies = [
  "hashbrown 0.15.3",
  "num-traits",
  "robust",
+ "serde",
  "smallvec",
 ]
 
