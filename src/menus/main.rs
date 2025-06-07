@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::{menus::Menu, screens::Screen, theme::widget};
+use crate::{asset_tracking::ResourceHandles, menus::Menu, screens::Screen, theme::widget};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Menu::Main), spawn_main_menu);
@@ -15,22 +15,30 @@ fn spawn_main_menu(mut commands: Commands) {
         StateScoped(Menu::Main),
         #[cfg(not(target_family = "wasm"))]
         children![
-            widget::button("Play", enter_levels_screen),
+            widget::button("Play", enter_loading_or_levels_screen),
             widget::button("Settings", open_settings_menu),
             widget::button("Credits", open_credits_menu),
             widget::button("Exit", exit_app),
         ],
         #[cfg(target_family = "wasm")]
         children![
-            widget::button("Play", open_levels_menu),
+            widget::button("Play", enter_loading_or_levels_screen),
             widget::button("Settings", open_settings_menu),
             widget::button("Credits", open_credits_menu),
         ],
     ));
 }
 
-fn enter_levels_screen(_: Trigger<Pointer<Click>>, mut next_screen: ResMut<NextState<Screen>>) {
-    next_screen.set(Screen::Levels);
+fn enter_loading_or_levels_screen(
+    _: Trigger<Pointer<Click>>,
+    resource_handles: Res<ResourceHandles>,
+    mut next_screen: ResMut<NextState<Screen>>,
+) {
+    if resource_handles.is_all_done() {
+        next_screen.set(Screen::Levels);
+    } else {
+        next_screen.set(Screen::Loading);
+    }
 }
 
 fn open_settings_menu(_: Trigger<Pointer<Click>>, mut next_menu: ResMut<NextState<Menu>>) {

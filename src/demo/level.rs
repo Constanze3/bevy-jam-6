@@ -21,7 +21,7 @@ use super::{
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<LevelAssets>();
 
-    app.load_resource::<LevelFolders>();
+    app.load_resource::<LevelHandles>();
     app.add_systems(Update, initialize_level_assets);
 
     app.add_observer(spawn_level);
@@ -34,21 +34,39 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-#[derive(Resource, Asset, TypePath, Clone)]
-pub struct LevelFolders {
+#[derive(Resource, Asset, Clone, Reflect)]
+#[reflect(Resource)]
+pub struct LevelHandles {
     #[dependency]
-    pub default: Handle<LoadedFolder>,
+    pub default: Vec<Handle<LevelData>>,
     #[dependency]
-    pub custom: Handle<LoadedFolder>,
+    pub custom: Vec<Handle<LevelData>>,
 }
 
-impl FromWorld for LevelFolders {
+impl FromWorld for LevelHandles {
     fn from_world(world: &mut World) -> Self {
+        let default_levels: Vec<&'static str> = vec!["0", "1"];
+        let custom_levels: Vec<&'static str> = vec![];
+
         let assets = world.resource::<AssetServer>();
-        Self {
-            default: assets.load_folder("levels/default"),
-            custom: assets.load_folder("levels/custom"),
-        }
+
+        let default = default_levels
+            .into_iter()
+            .map(|lv| {
+                let path = format!("levels/default/{}.ron", lv);
+                assets.load(path)
+            })
+            .collect();
+
+        let custom = custom_levels
+            .into_iter()
+            .map(|lv| {
+                let path = format!("levels/custom/{}.ron", lv);
+                assets.load(path)
+            })
+            .collect();
+
+        Self { default, custom }
     }
 }
 
@@ -59,32 +77,27 @@ pub struct LevelAssets {
     custom: HashMap<String, Handle<LevelData>>,
 }
 
-// Initializes the LevelAssets resource.
+// Initializes the LevelAssets resource from the raw LevelHandles resource.
 fn initialize_level_assets(
-    mut events: EventReader<AssetEvent<LevelFolders>>,
+    mut events: EventReader<AssetEvent<LevelHandles>>,
     mut commands: Commands,
-    level_folders: Res<Assets<LevelFolders>>,
-    loaded_folders: Res<Assets<LoadedFolder>>,
+    mut level_handles_assets: ResMut<Assets<LevelHandles>>,
     levels: Res<Assets<LevelData>>,
 ) {
     for event in events.read() {
         if let AssetEvent::LoadedWithDependencies { id } = event {
-            let folder_handles = level_folders.get(*id).unwrap();
+            let level_handles = level_handles_assets.get_mut(*id).unwrap();
 
-            let default_folder = loaded_folders.get(&folder_handles.default).unwrap();
-            let custom_folder = loaded_folders.get(&folder_handles.custom).unwrap();
+            let default = std::mem::take(&mut level_handles.default);
+            let custom = std::mem::take(&mut level_handles.default);
 
-            // Load default levels as a Vec<Handle<LevelData>>.
-            let map_default_folder = |folder: &LoadedFolder| {
-                let mut result = folder
-                    .handles
-                    .iter()
-                    .map(|h| h.clone().typed())
-                    .collect::<Vec<Handle<LevelData>>>();
+            // Load default levels as a sorted Vec<Handle<LevelData>>.
+            let map_default = |handles: Vec<Handle<LevelData>>| {
+                let mut folder = handles.clone();
 
                 // Each level should be named with numbers.
                 // This sorts them by their name.
-                result.sort_by(|h1, h2| {
+                folder.sort_by(|h1, h2| {
                     let parse_name = |level: &LevelData| {
                         level
                             .name
@@ -101,26 +114,25 @@ fn initialize_level_assets(
                     id1.cmp(&id2)
                 });
 
-                result
+                folder
             };
 
             // Load custom levels as a HashMap<String, Handle<LevelData>>.
-            let map_custom_folder = |folder: &LoadedFolder| {
-                folder
-                    .handles
+            let map_custom = |handles: Vec<Handle<LevelData>>| {
+                handles
                     .iter()
                     .map(|h| {
-                        let handle = h.clone().typed();
-                        let level = levels.get(&handle).unwrap();
+                        let level = levels.get(h).unwrap();
 
-                        (level.name.clone(), handle)
+                        (level.name.clone(), h.clone())
                     })
                     .collect()
             };
 
+            commands.remove_resource::<LevelHandles>();
             commands.insert_resource(LevelAssets {
-                default: map_default_folder(default_folder),
-                custom: map_custom_folder(custom_folder),
+                default: map_default(default),
+                custom: map_custom(custom),
             });
         }
     }
