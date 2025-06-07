@@ -32,7 +32,7 @@ impl FlatColorMesh {
                 .attribute(Mesh::ATTRIBUTE_POSITION)
                 .expect("The mesh should have the position attribute.")
             {
-                values.into_iter().map(|v| Vec3::from(*v)).collect()
+                values.iter().map(|v| Vec3::from(*v)).collect()
             } else {
                 panic!("The mesh should have the Float32x3 position attribute.");
             }
@@ -125,27 +125,27 @@ impl LevelData {
                     vec2(-100.0, 0.0),
                     Particle {
                         subparticles: vec![
-                            Box::new(Particle {
+                            Particle {
                                 initial_velocity: vec2(0.0, -200.0),
                                 subparticles: vec![
-                                    Box::new(Particle {
+                                    Particle {
                                         initial_velocity: vec2(200.0, 0.0),
                                         ..default()
-                                    }),
-                                    Box::new(Particle {
+                                    },
+                                    Particle {
                                         initial_velocity: vec2(-200.0, 0.0),
                                         ..default()
-                                    }),
+                                    },
                                 ],
                                 ..default()
-                            }),
-                            Box::new(Particle {
+                            },
+                            Particle {
                                 kind: ParticleKind::Killer,
                                 radius: 40.0,
                                 initial_velocity: vec2(0.0, 200.0),
                                 color: Color::srgb(1.0, 0.0, 0.0),
                                 ..default()
-                            }),
+                            },
                         ],
                         ..default()
                     },
@@ -154,14 +154,14 @@ impl LevelData {
                     vec2(-300.0, 0.0),
                     Particle {
                         subparticles: vec![
-                            Box::new(Particle {
+                            Particle {
                                 initial_velocity: vec2(0.0, -200.0),
                                 ..default()
-                            }),
-                            Box::new(Particle {
+                            },
+                            Particle {
                                 initial_velocity: vec2(0.0, 200.0),
                                 ..default()
-                            }),
+                            },
                         ],
                         ..default()
                     },

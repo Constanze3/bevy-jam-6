@@ -15,7 +15,7 @@ use crate::{
     asset_tracking::LoadResource,
     audio::sound_effect,
     external::maybe::Maybe,
-    physics::{CollisionHandlers, find_rigidbody_ancestor},
+    physics::{CollisionHandlerSystems, find_rigidbody_ancestor},
     screens::Screen,
 };
 
@@ -43,11 +43,11 @@ pub(super) fn plugin(app: &mut App) {
         PostUpdate,
         (
             particle_collision_handler
-                .in_set(CollisionHandlers)
+                .in_set(CollisionHandlerSystems)
                 .in_set(PausableSystems)
                 .run_if(in_state(Screen::Gameplay)),
             split_particle
-                .after(CollisionHandlers)
+                .after(CollisionHandlerSystems)
                 .run_if(in_state(Screen::Gameplay)),
         ),
     );
@@ -125,7 +125,7 @@ pub struct Particle {
     pub radius: f32,
     pub color: Color,
     pub initial_velocity: Vec2,
-    pub subparticles: Vec<Box<Particle>>,
+    pub subparticles: Vec<Particle>,
 }
 
 impl Default for Particle {
@@ -358,8 +358,6 @@ fn split_particle(
 
         let sub_particles = std::mem::take(&mut particle.subparticles);
         for subparticle in sub_particles {
-            let subparticle = *subparticle;
-
             let offset_distance = particle.radius + 2.0 * player_config.radius + subparticle.radius;
             let offset = subparticle.initial_velocity.normalize() * offset_distance;
 
@@ -406,7 +404,7 @@ fn spawn_particle(
             &arrows_assets,
         ),
         // The subparticle will have the same parent as the particle if it has a parent.
-        Maybe(trigger.parent.map(|parent| ChildOf(parent))),
+        Maybe(trigger.parent.map(ChildOf)),
     ));
 }
 

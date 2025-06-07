@@ -4,7 +4,7 @@ use bevy_rapier2d::prelude::*;
 use crate::{
     PausableSystems,
     demo::player::Player,
-    physics::{CollisionHandlers, find_rigidbody_ancestor},
+    physics::{CollisionHandlerSystems, find_rigidbody_ancestor},
     screens::Screen,
 };
 
@@ -17,10 +17,10 @@ pub(super) fn plugin(app: &mut App) {
         PostUpdate,
         (
             killer_collision_handler
-                .in_set(CollisionHandlers)
+                .in_set(CollisionHandlerSystems)
                 .in_set(PausableSystems)
                 .run_if(in_state(Screen::Gameplay)),
-            kill.after(CollisionHandlers)
+            kill.after(CollisionHandlerSystems)
                 .run_if(in_state(Screen::Gameplay)),
         ),
     );

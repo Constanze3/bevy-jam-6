@@ -75,7 +75,7 @@ pub fn arrows(
     let arrow_image = arrows_assets.arrow_image.clone();
 
     let particle = particle.clone();
-    let arrows_config = arrows_config.clone();
+    let arrows_config = *arrows_config;
     let arrow_spawn_list = move |parent: &mut RelatedSpawner<ChildOf>| {
         for sub_particle in particle.subparticles.iter() {
             let direction = sub_particle.initial_velocity.normalize();

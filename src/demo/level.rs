@@ -126,6 +126,8 @@ fn initialize_level_assets(
     }
 }
 
+// TODO Add custom levels to level selection menu.
+#[allow(dead_code)]
 #[derive(Component, Clone)]
 pub enum Level {
     Default(usize),

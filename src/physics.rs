@@ -2,11 +2,14 @@ use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
-    app.configure_sets(PostUpdate, CollisionHandlers.after(PhysicsSet::Writeback));
+    app.configure_sets(
+        PostUpdate,
+        CollisionHandlerSystems.after(PhysicsSet::Writeback),
+    );
 }
 
 #[derive(SystemSet, Debug, Clone, Copy, Eq, PartialEq, Hash, PartialOrd, Ord)]
-pub struct CollisionHandlers;
+pub struct CollisionHandlerSystems;
 
 /// Traverses the hierarchy from the given entity until the first ancestor with a rigid body.
 pub fn find_rigidbody_ancestor(
