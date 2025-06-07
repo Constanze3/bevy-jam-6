@@ -1,6 +1,6 @@
 //! Spawn the main level.
 
-use bevy::{asset::LoadedFolder, platform::collections::HashMap, prelude::*};
+use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_rapier2d::prelude::*;
 
 use crate::{
