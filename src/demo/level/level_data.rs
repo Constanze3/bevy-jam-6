@@ -9,7 +9,7 @@ use bevy_rapier2d::prelude::Collider;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use super::particle::{Particle, ParticleKind};
+use crate::demo::particle::{Particle, ParticleKind};
 
 pub(super) fn plugin(app: &mut App) {
     app.init_asset::<LevelData>();

@@ -186,7 +186,7 @@ pub fn particle_bundle(
     arrows_assets: &ArrowsAssets,
 ) -> impl Bundle {
     let spawn_list = {
-        let arrows_config = arrows_config.clone();
+        let arrows_config = *arrows_config;
         let arrows_assets = arrows_assets.clone();
         let particle = particle.clone();
 

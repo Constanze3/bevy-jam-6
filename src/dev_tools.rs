@@ -36,7 +36,7 @@ pub(super) fn plugin(app: &mut App) {
 const TOGGLE_KEY: KeyCode = KeyCode::Backquote;
 
 fn print_example_level() {
-    let level_data = crate::demo::level_data::LevelData::example();
+    let level_data = crate::demo::level::level_data::LevelData::example();
     println!(
         "{}",
         ron::ser::to_string_pretty(&level_data, ron::ser::PrettyConfig::default()).unwrap(),
