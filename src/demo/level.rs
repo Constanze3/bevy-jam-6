@@ -20,7 +20,11 @@ use crate::{
     screens::Screen,
 };
 
+use super::particle::{ParticleDespawned, ParticleSpawned};
+
 pub(super) fn plugin(app: &mut App) {
+    app.register_type::<ParticleCount>();
+
     app.add_plugins((level_data::plugin, level_loading::plugin));
     app.add_observer(spawn_level);
     app.add_systems(
@@ -30,15 +34,29 @@ pub(super) fn plugin(app: &mut App) {
             .in_set(AppSystems::Update)
             .in_set(PausableSystems),
     );
+
+    app.add_event::<EndLevel>();
+    app.add_systems(
+        Update,
+        (increase_particle_count, decrease_particle_count, end_level)
+            .chain()
+            .run_if(in_state(Screen::Gameplay))
+            .in_set(AppSystems::Update),
+    );
 }
 
 // TODO Add custom levels to level selection menu.
 #[allow(dead_code)]
 #[derive(Component, Clone)]
+#[require(ParticleCount)]
 pub enum Level {
     Default(usize),
     Custom(String),
 }
+
+#[derive(Component, Default, Reflect)]
+#[reflect(Component)]
+struct ParticleCount(usize);
 
 #[derive(Event)]
 pub struct SpawnLevel(pub Level);
@@ -200,6 +218,31 @@ fn screen_bounds(letterboxing: &Letterboxing) -> impl Bundle {
     )
 }
 
+fn increase_particle_count(
+    mut events: EventReader<ParticleSpawned>,
+    mut particle_count_query: Query<&mut ParticleCount>,
+) {
+    let mut particle_count = particle_count_query.single_mut().unwrap();
+    for _ in events.read() {
+        particle_count.0 += 1;
+    }
+}
+
+fn decrease_particle_count(
+    mut events: EventReader<ParticleDespawned>,
+    mut particle_count_query: Query<&mut ParticleCount>,
+    mut end_level_events: EventWriter<EndLevel>,
+) {
+    let mut particle_count = particle_count_query.single_mut().unwrap();
+    for _ in events.read() {
+        particle_count.0 -= 1;
+    }
+
+    if particle_count.0 == 0 {
+        end_level_events.write(EndLevel);
+    }
+}
+
 fn restart_level(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     level_query: Query<(Entity, &Level)>,
@@ -209,5 +252,35 @@ fn restart_level(
         let (entity, level) = level_query.single().unwrap();
         commands.entity(entity).despawn();
         commands.trigger(SpawnLevel(level.clone()));
+    }
+}
+
+#[derive(Event)]
+struct EndLevel;
+
+fn end_level(
+    mut events: EventReader<EndLevel>,
+    level_query: Query<(Entity, &Level)>,
+    level_assets: Res<LevelAssets>,
+    mut commands: Commands,
+) {
+    for _ in events.read() {
+        let (entity, level) = level_query.single().unwrap();
+
+        if let Level::Default(id) = level {
+            let new_id = id + 1;
+
+            if level_assets.default.len() <= new_id {
+                // TODO: End game
+                return;
+            }
+
+            // Spawn next level.
+            commands.trigger(SpawnLevel(Level::Default(id + 1)));
+        } else {
+            panic!("Not implemented.");
+        }
+
+        commands.entity(entity).despawn();
     }
 }

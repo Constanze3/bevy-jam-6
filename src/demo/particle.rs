@@ -57,6 +57,9 @@ pub(super) fn plugin(app: &mut App) {
     app.add_observer(particle_particle_collision);
     app.add_observer(spawn_particle);
 
+    app.add_event::<ParticleSpawned>();
+    app.add_event::<ParticleDespawned>();
+
     // Invincibility
 
     app.add_systems(
@@ -306,6 +309,9 @@ fn particle_particle_collision(
 #[derive(Event)]
 pub struct ParticleSplitEvent(pub Entity);
 
+#[derive(Event)]
+pub struct ParticleDespawned;
+
 fn split_particle(
     mut events: EventReader<ParticleSplitEvent>,
     mut particle_query: Query<
@@ -320,6 +326,7 @@ fn split_particle(
     >,
     player_config: Res<PlayerConfig>,
     mut commands: Commands,
+    mut despawned_events: EventWriter<ParticleDespawned>,
     // mut effect: Query<
     //     (&mut EffectProperties, &mut EffectSpawner, &mut Transform),
     //     Without<Particle>,
@@ -370,6 +377,7 @@ fn split_particle(
         }
 
         commands.entity(entity).despawn();
+        despawned_events.write(ParticleDespawned);
     }
 }
 
@@ -381,6 +389,9 @@ pub struct SpawnParticle {
     pub parent: Option<Entity>,
 }
 
+#[derive(Event)]
+pub struct ParticleSpawned;
+
 fn spawn_particle(
     mut trigger: Trigger<SpawnParticle>,
     particle_config: Res<ParticleConfig>,
@@ -388,6 +399,7 @@ fn spawn_particle(
     mut materials: ResMut<Assets<ColorMaterial>>,
     arrows_config: Res<ArrowsConfig>,
     arrows_assets: Res<ArrowsAssets>,
+    mut spawned_events: EventWriter<ParticleSpawned>,
     mut commands: Commands,
 ) {
     commands.spawn((
@@ -404,6 +416,8 @@ fn spawn_particle(
         // The subparticle will have the same parent as the particle if it has a parent.
         Maybe(trigger.parent.map(ChildOf)),
     ));
+
+    spawned_events.write(ParticleSpawned);
 }
 
 fn invincibility_added(
