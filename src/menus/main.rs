@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::{menus::Menu, theme::widget};
+use crate::{menus::Menu, screens::Screen, theme::widget};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Menu::Main), spawn_main_menu);
@@ -15,7 +15,7 @@ fn spawn_main_menu(mut commands: Commands) {
         StateScoped(Menu::Main),
         #[cfg(not(target_family = "wasm"))]
         children![
-            widget::button("Play", open_levels_menu),
+            widget::button("Play", enter_levels_screen),
             widget::button("Settings", open_settings_menu),
             widget::button("Credits", open_credits_menu),
             widget::button("Exit", exit_app),
@@ -29,8 +29,8 @@ fn spawn_main_menu(mut commands: Commands) {
     ));
 }
 
-fn open_levels_menu(_: Trigger<Pointer<Click>>, mut next_menu: ResMut<NextState<Menu>>) {
-    next_menu.set(Menu::Levels);
+fn enter_levels_screen(_: Trigger<Pointer<Click>>, mut next_screen: ResMut<NextState<Screen>>) {
+    next_screen.set(Screen::Levels);
 }
 
 fn open_settings_menu(_: Trigger<Pointer<Click>>, mut next_menu: ResMut<NextState<Menu>>) {

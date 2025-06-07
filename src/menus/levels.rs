@@ -58,6 +58,6 @@ fn enter_loading_or_gameplay_screen(
     }
 }
 
-fn go_back(_: Trigger<Pointer<Click>>, mut next_menu: ResMut<NextState<Menu>>) {
-    next_menu.set(Menu::Main);
+fn go_back(_: Trigger<Pointer<Click>>, mut next_screen: ResMut<NextState<Screen>>) {
+    next_screen.set(Screen::Title);
 }
