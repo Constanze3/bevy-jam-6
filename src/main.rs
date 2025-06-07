@@ -72,8 +72,8 @@ impl Plugin for AppPlugin {
             asset_tracking::plugin,
             audio::plugin,
             demo::plugin,
-            #[cfg(feature = "dev")]
-            dev_tools::plugin,
+            // #[cfg(feature = "dev")]
+            // dev_tools::plugin,
             menus::plugin,
             screens::plugin,
             theme::plugin,

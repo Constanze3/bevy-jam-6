@@ -76,7 +76,7 @@ pub fn player(
     materials: &mut ResMut<Assets<ColorMaterial>>,
 ) -> impl Bundle {
     let mesh = meshes.add(Circle::new(radius));
-    let material = materials.add(Color::hsl(0.0, 0.0, 0.0));
+    let material = materials.add(Color::hsl(0.0, 0.95, 0.7));
 
     (
         Name::new("Player"),

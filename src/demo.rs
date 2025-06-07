@@ -14,10 +14,10 @@ pub mod level_data;
 mod particle;
 pub mod particle_effect;
 pub mod player;
-pub mod levels_asset;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((
+        level_data::plugin,
         level::plugin,
         player::plugin,
         input::plugin,

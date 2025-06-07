@@ -1,0 +1,88 @@
+(
+    name: "Example",
+    author: None,
+    particles: [
+        (
+            spawn_position: (-100.0, 0.0),
+            particle: (
+                kind: Normal,
+                radius: 20.0,
+                color: Srgba((
+                    red: 0.05882353,
+                    green: 0.58431375,
+                    blue: 0.8862745,
+                    alpha: 1.0,
+                )),
+                initial_velocity: (0.0, 0.0),
+                subparticles: [
+                    (
+                        kind: Normal,
+                        radius: 20.0,
+                        color: Srgba((
+                            red: 0.05882353,
+                            green: 0.58431375,
+                            blue: 0.8862745,
+                            alpha: 1.0,
+                        )),
+                        initial_velocity: (0.0, -200.0),
+                        subparticles: [],
+                    ),
+                    (
+                        kind: Normal,
+                        radius: 20.0,
+                        color: Srgba((
+                            red: 0.05882353,
+                            green: 0.58431375,
+                            blue: 0.8862745,
+                            alpha: 1.0,
+                        )),
+                        initial_velocity: (0.0, 200.0),
+                        subparticles: [],
+                    ),
+                ],
+            ),
+        ),
+    ],
+    obstacles: [
+        (
+            transform: (
+                translation: (100.0, 0.0, 0.0),
+                rotation: (0.0, 0.0, 0.0, 1.0),
+                scale: (1.0, 1.0, 1.0),
+            ),
+            flat_color_mesh: (
+                color: LinearRgba((
+                    red: 1.0,
+                    green: 1.0,
+                    blue: 1.0,
+                    alpha: 1.0,
+                )),
+                positions: [
+                    (25.0, 25.0, 0.0),
+                    (-25.0, 25.0, 0.0),
+                    (-25.0, -25.0, 0.0),
+                    (25.0, -25.0, 0.0),
+                ],
+                indices: [
+                    0,
+                    1,
+                    2,
+                    0,
+                    2,
+                    3,
+                ],
+            ),
+            collider: (
+                raw: Cuboid((
+                    half_extents: (25.0, 25.0),
+                )),
+                unscaled: Cuboid((
+                    half_extents: (25.0, 25.0),
+                )),
+                scale: (1.0, 1.0),
+            ),
+	    is_killer: false,
+        ),
+    ],
+    player_spawn: (0.0, 0.0),
+)

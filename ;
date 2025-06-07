@@ -20,6 +20,7 @@ use super::{
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<LevelAssets>();
     app.load_resource::<LevelAssets>();
+    app.load_resource::<Levels>();
 
     app.add_observer(spawn_level);
     app.add_systems(
@@ -31,18 +32,27 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
+#[derive(Resource, Asset, TypePath, Clone)]
+pub struct Levels(Vec<LevelData>);
+
+impl FromWorld for Levels {
+    fn from_world(world: &mut World) -> Self {
+        Self(Vec::new())
+    }
+}
+
 #[derive(Resource, Asset, Clone, Reflect)]
 #[reflect(Resource)]
 pub struct LevelAssets {
     #[dependency]
-    data: Vec<Handle<LevelData>>,
+    music: Handle<AudioSource>,
 }
 
 impl FromWorld for LevelAssets {
     fn from_world(world: &mut World) -> Self {
         let assets = world.resource::<AssetServer>();
         Self {
-            data: vec![assets.load("levels/default/basic.ron")],
+            music: assets.load("audio/music/Fluffing A Duck.ogg"),
         }
     }
 }
@@ -58,8 +68,6 @@ pub fn spawn_level(
     _: Trigger<SpawnLevel>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    levels: Res<Assets<LevelData>>,
-    level_assets: Res<LevelAssets>,
     music_query: Query<Entity, With<GameplayMusic>>,
     music_assets: Res<MusicAssets>,
     letterboxing: Res<Letterboxing>,
@@ -75,8 +83,7 @@ pub fn spawn_level(
         ));
     }
 
-    let level_handle = level_assets.data.get(0).unwrap();
-    let level_data = levels.get(level_handle).unwrap();
+    let level_data = LevelData::example();
 
     let level = commands
         .spawn((
@@ -105,9 +112,7 @@ pub fn spawn_level(
         ))
         .id();
 
-    for obstacle_data in level_data.obstacles.iter() {
-        let obstacle_data = obstacle_data.clone();
-
+    for obstacle_data in level_data.obstacles {
         let material = materials.add(obstacle_data.flat_color_mesh.color());
         let mesh = meshes.add(obstacle_data.flat_color_mesh.into_mesh());
 
@@ -124,10 +129,10 @@ pub fn spawn_level(
         commands.entity(level).add_child(obstacle);
     }
 
-    for particle_data in level_data.particles.iter() {
+    for particle_data in level_data.particles {
         commands.trigger(SpawnParticle {
             translation: particle_data.spawn_position,
-            particle: particle_data.particle.clone(),
+            particle: particle_data.particle,
             spawn_with_invincible: false,
             parent: Some(level),
         });

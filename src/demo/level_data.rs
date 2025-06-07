@@ -1,14 +1,22 @@
+#![allow(unused)]
+
 use bevy::{
-    asset::RenderAssetUsages,
+    asset::{AssetLoader, LoadContext, RenderAssetUsages, io::Reader},
     prelude::*,
     render::mesh::{Indices, PrimitiveTopology, VertexAttributeValues},
 };
 use bevy_rapier2d::prelude::Collider;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 use super::particle::{Particle, ParticleKind};
 
-#[derive(Serialize, Deserialize)]
+pub(super) fn plugin(app: &mut App) {
+    app.init_asset::<LevelData>();
+    app.init_asset_loader::<LevelDataLoader>();
+}
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct FlatColorMesh {
     color: Color,
     positions: Vec<Vec3>,
@@ -58,7 +66,7 @@ impl FlatColorMesh {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct ParticleData {
     pub spawn_position: Vec2,
     pub particle: Particle,
@@ -73,7 +81,7 @@ impl ParticleData {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct ObstacleData {
     pub transform: Transform,
     pub flat_color_mesh: FlatColorMesh,
@@ -98,7 +106,7 @@ impl ObstacleData {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Asset, TypePath, Clone, Serialize, Deserialize)]
 pub struct LevelData {
     pub name: String,
     pub author: Option<String>,
@@ -168,5 +176,37 @@ impl LevelData {
             )],
             player_spawn: vec2(0.0, 0.0),
         }
+    }
+}
+
+#[derive(Default)]
+struct LevelDataLoader;
+
+#[non_exhaustive]
+#[derive(Debug, Error)]
+enum LevelAssetLoaderError {
+    #[error("Could not load asset: {0}")]
+    Io(#[from] std::io::Error),
+    #[error("Could not parse RON: {0}")]
+    RonSpannedError(#[from] ron::error::SpannedError),
+}
+
+impl AssetLoader for LevelDataLoader {
+    type Asset = LevelData;
+    type Settings = ();
+    type Error = LevelAssetLoaderError;
+
+    async fn load(
+        &self,
+        reader: &mut dyn Reader,
+        _settings: &(),
+        _load_context: &mut LoadContext<'_>,
+    ) -> Result<Self::Asset, Self::Error> {
+        let mut bytes = Vec::new();
+        reader.read_to_end(&mut bytes).await?;
+
+        let level_data = ron::de::from_bytes::<LevelData>(&bytes)?;
+
+        Ok(level_data)
     }
 }

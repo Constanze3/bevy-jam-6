@@ -24,6 +24,7 @@ bevy_mod_picking = "0.20.1"
 serde = { version = "1", features = ["derive"] }
 ron = "0.10.1"
 getrandom = { version = "0.3", features = ["wasm_js"] }
+thiserror = "2.0.12"
 
 
 # Your web builds will start failing if you add a dependency that pulls in `getrandom` v0.3+.
