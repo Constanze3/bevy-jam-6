@@ -1,4 +1,8 @@
 use bevy::{
+    core_pipeline::{
+        bloom::Bloom,
+        tonemapping::{DebandDither, Tonemapping},
+    },
     image::{TextureFormatPixelInfo, Volume},
     prelude::*,
     render::{
@@ -115,10 +119,14 @@ fn spawn_camera(
             ..OrthographicProjection::default_2d()
         }),
         Camera {
+            hdr: true,
             order: 1,
             target: RenderTarget::Image(image_handle.clone().into()),
             ..default()
         },
+        Tonemapping::TonyMcMapface,
+        Bloom::default(),
+        DebandDither::Enabled,
     ));
 
     commands.spawn((
