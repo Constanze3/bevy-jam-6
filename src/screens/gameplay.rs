@@ -9,10 +9,23 @@ use crate::{
     screens::Screen,
 };
 
+/// The level selected to be played.
+#[derive(Resource, Default)]
+pub struct SelectedLevel(pub Option<Level>);
+
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(OnEnter(Screen::Gameplay), |mut commands: Commands| {
-        commands.trigger(SpawnLevel(Level::Default(1)))
-    });
+    app.init_resource::<SelectedLevel>();
+
+    app.add_systems(
+        OnEnter(Screen::Gameplay),
+        |mut commands: Commands, selected_level: Res<SelectedLevel>| {
+            if let Some(level) = selected_level.0.clone() {
+                commands.trigger(SpawnLevel(level))
+            } else {
+                unreachable!("When gameplay starts a level should be selected.");
+            }
+        },
+    );
 
     // Toggle pause on key press.
     app.add_systems(
