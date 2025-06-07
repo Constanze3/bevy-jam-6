@@ -21,7 +21,8 @@ use crate::{
 
 use super::{
     killer::Killer,
-    player::{Player, PlayerConfig, TimeSpeed},
+    player::{Player, PlayerConfig},
+    time_scale::{SetTimeScale, TimeScaleKind},
 };
 
 mod arrows;
@@ -263,10 +264,9 @@ fn player_particle_collision(
     trigger: Trigger<PlayerParticleCollisionEvent>,
     mut player_query: Query<(&mut Player, &mut Velocity)>,
     mut particle_query: Query<Option<&Invincible>, (With<Particle>, Without<Player>)>,
-    mut timestep_mode: ResMut<TimestepMode>,
-    time_speed: Res<TimeSpeed>,
     particle_assets: Res<ParticleAssets>,
-    mut events: EventWriter<ParticleSplitEvent>,
+    mut split_events: EventWriter<ParticleSplitEvent>,
+    mut time_events: EventWriter<SetTimeScale>,
     mut commands: Commands,
 ) {
     let invincible = particle_query.get(trigger.particle).unwrap();
@@ -279,11 +279,9 @@ fn player_particle_collision(
 
     // velocity.linvel = Vec2::ZERO;
 
-    if let TimestepMode::Variable { time_scale, .. } = timestep_mode.as_mut() {
-        *time_scale = time_speed.slow;
-    }
+    time_events.write(SetTimeScale(TimeScaleKind::Slowed));
 
-    events.write(ParticleSplitEvent(trigger.particle));
+    split_events.write(ParticleSplitEvent(trigger.particle));
     commands.spawn(sound_effect(particle_assets.pop_sound.clone()));
 }
 
@@ -296,11 +294,11 @@ pub struct ParticleParticleCollisionEvent {
 fn particle_particle_collision(
     trigger: Trigger<ParticleParticleCollisionEvent>,
     particle_assets: Res<ParticleAssets>,
-    mut events: EventWriter<ParticleSplitEvent>,
+    mut split_events: EventWriter<ParticleSplitEvent>,
     mut commands: Commands,
 ) {
-    events.write(ParticleSplitEvent(trigger.particle1));
-    events.write(ParticleSplitEvent(trigger.particle2));
+    split_events.write(ParticleSplitEvent(trigger.particle1));
+    split_events.write(ParticleSplitEvent(trigger.particle2));
 
     commands.spawn(sound_effect(particle_assets.pop_sound.clone()));
 }

@@ -8,7 +8,7 @@ use crate::{
     screens::Screen,
 };
 
-use super::player::TimeSpeed;
+use super::time_scale::{SetTimeScale, SetTimeScaleOverride, TimeScaleKind};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_event::<KillEvent>();
@@ -71,15 +71,14 @@ fn killer_collision_handler(
 
 fn kill(
     mut events: EventReader<KillEvent>,
-    mut timestep_mode: ResMut<TimestepMode>,
-    time_speed: Res<TimeSpeed>,
+    mut time_events: EventWriter<SetTimeScale>,
+    mut time_override_events: EventWriter<SetTimeScaleOverride>,
     mut commands: Commands,
 ) {
     for event in events.read() {
         commands.entity(event.player).despawn();
 
-        if let TimestepMode::Variable { time_scale, .. } = timestep_mode.as_mut() {
-            *time_scale = time_speed.normal;
-        }
+        time_override_events.write(SetTimeScaleOverride(None));
+        time_events.write(SetTimeScale(TimeScaleKind::Normal));
     }
 }

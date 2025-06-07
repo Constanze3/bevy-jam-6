@@ -12,6 +12,7 @@ pub mod level;
 mod particle;
 pub mod particle_effect;
 pub mod player;
+pub mod time_scale;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((
@@ -21,5 +22,6 @@ pub(super) fn plugin(app: &mut App) {
         drag_indicator::plugin,
         particle::plugin,
         killer::plugin,
+        time_scale::plugin,
     ));
 }

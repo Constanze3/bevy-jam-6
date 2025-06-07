@@ -13,22 +13,23 @@
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
-use super::drag_input::StretchInputEvent;
+use super::{
+    drag_input::StretchInputEvent,
+    time_scale::{SetTimeScale, SetTimeScaleOverride, TimeScaleKind},
+};
 use crate::{
     AppSystems, PausableSystems, asset_tracking::LoadResource, audio::sound_effect, screens::Screen,
 };
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<Player>();
-    app.register_type::<TimeSpeed>();
 
     app.init_resource::<PlayerConfig>();
     app.load_resource::<PlayerAssets>();
-    app.init_resource::<TimeSpeed>();
 
     app.add_systems(
         Update,
-        handle_input
+        (override_time_scale, handle_drag_input)
             .in_set(AppSystems::Update)
             .in_set(PausableSystems)
             .run_if(in_state(Screen::Gameplay)),
@@ -68,22 +69,6 @@ impl FromWorld for PlayerAssets {
 
         Self {
             shoot_sound: assets.load::<AudioSource>("audio/sound_effects/shoot.ogg"),
-        }
-    }
-}
-
-#[derive(Resource, Reflect)]
-#[reflect(Resource)]
-pub struct TimeSpeed {
-    pub slow: f32,
-    pub normal: f32,
-}
-
-impl Default for TimeSpeed {
-    fn default() -> Self {
-        Self {
-            slow: 0.1,
-            normal: 1.0,
         }
     }
 }
@@ -130,13 +115,28 @@ pub struct Player {
     pub can_move: bool,
 }
 
-fn handle_input(
+fn override_time_scale(
+    input: Res<ButtonInput<MouseButton>>,
+    query: Query<Entity, With<Player>>,
+    mut time_override_events: EventWriter<SetTimeScaleOverride>,
+) {
+    if !query.is_empty() {
+        if input.just_pressed(MouseButton::Right) {
+            time_override_events.write(SetTimeScaleOverride(Some(TimeScaleKind::Normal)));
+        }
+
+        if input.just_released(MouseButton::Right) {
+            time_override_events.write(SetTimeScaleOverride(None));
+        }
+    }
+}
+
+fn handle_drag_input(
     mut events: EventReader<StretchInputEvent>,
     mut query: Query<(&mut Player, &mut ExternalImpulse, &mut Velocity)>,
-    mut timestep_mode: ResMut<TimestepMode>,
-    time_speed: Res<TimeSpeed>,
     player_config: Res<PlayerConfig>,
     player_assets: Res<PlayerAssets>,
+    mut time_events: EventWriter<SetTimeScale>,
     mut commands: Commands,
 ) {
     if query.is_empty() {
@@ -157,8 +157,6 @@ fn handle_input(
 
         player.can_move = false;
 
-        if let TimestepMode::Variable { time_scale, .. } = timestep_mode.as_mut() {
-            *time_scale = time_speed.normal;
-        }
+        time_events.write(SetTimeScale(TimeScaleKind::Normal));
     }
 }
