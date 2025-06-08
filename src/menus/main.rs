@@ -2,7 +2,11 @@
 
 use bevy::prelude::*;
 
-use crate::{asset_tracking::ResourceHandles, menus::Menu, screens::Screen, theme::widget};
+use crate::{
+    menus::Menu,
+    screens::Screen,
+    theme::{BoldFont, palette::HEADER_TEXT, widget},
+};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Menu::Main), spawn_main_menu);
@@ -15,30 +19,44 @@ fn spawn_main_menu(mut commands: Commands) {
         StateScoped(Menu::Main),
         #[cfg(not(target_family = "wasm"))]
         children![
-            widget::button("Play", enter_loading_or_levels_screen),
+            (
+                Name::new("Header"),
+                Text("Antim4tter".into()),
+                TextFont::from_font_size(80.0),
+                BoldFont,
+                TextColor(HEADER_TEXT),
+            ),
+            Node {
+                height: Val::Px(20.0),
+                ..default()
+            },
+            widget::button("Play", enter_levels_screen),
             widget::button("Settings", open_settings_menu),
             widget::button("Credits", open_credits_menu),
             widget::button("Exit", exit_app),
         ],
         #[cfg(target_family = "wasm")]
         children![
-            widget::button("Play", enter_loading_or_levels_screen),
+            (
+                Name::new("Header"),
+                Text("Antim4tter".into()),
+                TextFont::from_font_size(80.0),
+                BoldFont,
+                TextColor(HEADER_TEXT),
+            ),
+            Node {
+                height: Val::Px(20.0),
+                ..default()
+            },
+            widget::button("Play", enter_levels_screen),
             widget::button("Settings", open_settings_menu),
             widget::button("Credits", open_credits_menu),
         ],
     ));
 }
 
-fn enter_loading_or_levels_screen(
-    _: Trigger<Pointer<Click>>,
-    resource_handles: Res<ResourceHandles>,
-    mut next_screen: ResMut<NextState<Screen>>,
-) {
-    if resource_handles.is_all_done() {
-        next_screen.set(Screen::Levels);
-    } else {
-        next_screen.set(Screen::Loading);
-    }
+fn enter_levels_screen(_: Trigger<Pointer<Click>>, mut next_screen: ResMut<NextState<Screen>>) {
+    next_screen.set(Screen::Levels);
 }
 
 fn open_settings_menu(_: Trigger<Pointer<Click>>, mut next_menu: ResMut<NextState<Menu>>) {

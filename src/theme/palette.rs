@@ -4,7 +4,7 @@ use bevy::prelude::*;
 pub const LABEL_TEXT: Color = Color::srgb(0.867, 0.827, 0.412);
 
 /// #fcfbcc
-pub const HEADER_TEXT: Color = Color::srgb(0.988, 0.984, 0.800);
+pub const HEADER_TEXT: Color = Color::srgb(1.0, 1.0, 1.0);
 
 /// #ececec
 pub const BUTTON_TEXT: Color = Color::srgb(0.925, 0.925, 0.925);

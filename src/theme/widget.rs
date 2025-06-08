@@ -10,6 +10,8 @@ use bevy::{
 
 use crate::theme::{interaction::InteractionPalette, palette::*};
 
+use super::RegularFont;
+
 /// A root UI node that fills the window and centers its content.
 pub fn ui_root(name: impl Into<Cow<'static, str>>) -> impl Bundle {
     (
@@ -35,6 +37,7 @@ pub fn header(text: impl Into<String>) -> impl Bundle {
         Name::new("Header"),
         Text(text.into()),
         TextFont::from_font_size(40.0),
+        RegularFont,
         TextColor(HEADER_TEXT),
     )
 }
@@ -45,6 +48,7 @@ pub fn label(text: impl Into<String>) -> impl Bundle {
         Name::new("Label"),
         Text(text.into()),
         TextFont::from_font_size(24.0),
+        RegularFont,
         TextColor(LABEL_TEXT),
     )
 }
@@ -67,7 +71,7 @@ where
                 justify_content: JustifyContent::Center,
                 ..default()
             },
-            BorderRadius::MAX,
+            BorderRadius::all(Val::Px(10.0)),
         ),
     )
 }
@@ -123,6 +127,7 @@ where
                         Name::new("Button Text"),
                         Text(text),
                         TextFont::from_font_size(40.0),
+                        RegularFont,
                         TextColor(BUTTON_TEXT),
                         // Don't bubble picking events from the text up to the button.
                         Pickable::IGNORE,

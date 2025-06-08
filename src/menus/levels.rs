@@ -9,11 +9,11 @@ use crate::{
     demo::level::{Level, level_loading::LevelAssets},
     menus::Menu,
     screens::{Screen, gameplay::SelectedLevel},
-    theme::{prelude::InteractionPalette, widget},
+    theme::{RegularFont, prelude::InteractionPalette, widget},
 };
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(OnEnter(Menu::Levels), spawn_levels_screen);
+    app.add_systems(OnEnter(Menu::Levels), spawn_levels_menu);
 }
 
 #[derive(Component)]
@@ -61,6 +61,7 @@ where
                         Name::new("Button Text"),
                         Text(text),
                         TextFont::from_font_size(40.0),
+                        RegularFont,
                         TextColor(text_color),
                         Pickable::IGNORE,
                     )],
@@ -70,11 +71,11 @@ where
     )
 }
 
-fn spawn_levels_screen(mut commands: Commands, level_assets: Res<LevelAssets>) {
+fn spawn_levels_menu(mut commands: Commands, level_assets: Res<LevelAssets>) {
     let num_default_levels = level_assets.default.len();
 
     commands.spawn((
-        widget::ui_root("Levels Screen"),
+        widget::ui_root("Levels Menu"),
         GlobalZIndex(2),
         StateScoped(Menu::Levels),
         children![

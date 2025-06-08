@@ -1,5 +1,6 @@
 //! The game's main screen states and transitions between them.
 
+mod end;
 pub mod gameplay;
 mod levels;
 mod loading;
@@ -12,6 +13,7 @@ pub(super) fn plugin(app: &mut App) {
     app.init_state::<Screen>();
 
     app.add_plugins((
+        end::plugin,
         gameplay::plugin,
         levels::plugin,
         loading::plugin,
@@ -30,4 +32,5 @@ pub enum Screen {
     Levels,
     Loading,
     Gameplay,
+    End,
 }
