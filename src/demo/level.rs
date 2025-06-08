@@ -265,13 +265,13 @@ fn restart_level(
 struct EndLevel;
 
 fn end_level(
-    mut events: EventReader<EndLevel>,
+    events: EventReader<EndLevel>,
     level_query: Query<(Entity, &Level)>,
     level_assets: Res<LevelAssets>,
     mut end_game_events: EventWriter<EndGame>,
     mut commands: Commands,
 ) {
-    for _ in events.read() {
+    if !events.is_empty() {
         let (entity, level) = level_query.single().unwrap();
 
         if let Level::Default(id) = level {
@@ -289,7 +289,6 @@ fn end_level(
         }
 
         commands.entity(entity).despawn();
-        return;
     }
 }
 
@@ -297,7 +296,7 @@ fn end_level(
 struct EndGame;
 
 fn end_game(events: EventReader<EndGame>, mut next_screen: ResMut<NextState<Screen>>) {
-    if 0 < events.len() {
+    if !events.is_empty() {
         next_screen.set(Screen::End);
     }
 }
