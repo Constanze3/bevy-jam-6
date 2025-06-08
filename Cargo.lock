@@ -544,6 +544,7 @@ dependencies = [
  "bevy",
  "bevy-inspector-egui",
  "bevy_asset_loader",
+ "bevy_enoki",
  "bevy_mod_picking",
  "bevy_rapier2d",
  "getrandom 0.3.3",
@@ -1107,6 +1108,18 @@ checksum = "8148f4edee470a2ea5cad010184c492a4c94c36d7a7158ea28e134ea87f274ab"
 dependencies = [
  "bevy_macro_utils 0.16.1",
  "encase_derive_impl 0.10.0",
+]
+
+[[package]]
+name = "bevy_enoki"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "740289c63cb752adbad3823c49c01d479d853a10d76ccfe5ce3d1f3ea8e14ac2"
+dependencies = [
+ "bevy",
+ "rand 0.8.5",
+ "ron 0.8.1",
+ "serde",
 ]
 
 [[package]]
