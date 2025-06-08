@@ -36,9 +36,15 @@ pub(super) fn plugin(app: &mut App) {
     );
 
     app.add_event::<EndLevel>();
+    app.add_event::<EndGame>();
     app.add_systems(
         Update,
-        (increase_particle_count, decrease_particle_count, end_level)
+        (
+            increase_particle_count,
+            decrease_particle_count,
+            end_level,
+            end_game,
+        )
             .chain()
             .run_if(in_state(Screen::Gameplay))
             .in_set(AppSystems::Update),
@@ -259,19 +265,20 @@ fn restart_level(
 struct EndLevel;
 
 fn end_level(
-    mut events: EventReader<EndLevel>,
+    events: EventReader<EndLevel>,
     level_query: Query<(Entity, &Level)>,
     level_assets: Res<LevelAssets>,
+    mut end_game_events: EventWriter<EndGame>,
     mut commands: Commands,
 ) {
-    for _ in events.read() {
+    if !events.is_empty() {
         let (entity, level) = level_query.single().unwrap();
 
         if let Level::Default(id) = level {
             let new_id = id + 1;
 
             if level_assets.default.len() <= new_id {
-                // TODO: End game
+                end_game_events.write(EndGame);
                 return;
             }
 
@@ -282,5 +289,14 @@ fn end_level(
         }
 
         commands.entity(entity).despawn();
+    }
+}
+
+#[derive(Event)]
+struct EndGame;
+
+fn end_game(events: EventReader<EndGame>, mut next_screen: ResMut<NextState<Screen>>) {
+    if !events.is_empty() {
+        next_screen.set(Screen::End);
     }
 }

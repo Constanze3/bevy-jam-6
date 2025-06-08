@@ -1,6 +1,7 @@
 //! The game's menus and transitions between them.
 
 mod credits;
+mod end;
 mod levels;
 mod main;
 mod pause;
@@ -13,6 +14,7 @@ pub(super) fn plugin(app: &mut App) {
 
     app.add_plugins((
         credits::plugin,
+        end::plugin,
         levels::plugin,
         main::plugin,
         settings::plugin,
@@ -30,4 +32,5 @@ pub enum Menu {
     Credits,
     Settings,
     Pause,
+    End,
 }
