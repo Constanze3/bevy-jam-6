@@ -6,4 +6,6 @@
     "workbench.editor.customLabels.patterns": {
         "**/mod.rs": "${dirname}/mod.rs"
     },
+    "editor.defaultFormatter": "rust-lang.rust-analyzer",
+    "editor.formatOnSave": true
 }
