@@ -26,6 +26,7 @@ use crate::{
     screens::Screen,
 };
 
+use super::editor::EditorState;
 use super::player::Player;
 use super::time_scale::{SetTimeScale, SetTimeScaleOverride, TimeScaleKind};
 
@@ -36,7 +37,10 @@ pub(super) fn plugin(app: &mut App) {
     app.load_resource::<LevelAudioAssets>();
 
     app.add_plugins((level_data::plugin, level_loading::plugin));
+
     app.add_observer(spawn_level);
+    app.add_observer(spawn_raw_level);
+
     app.add_systems(
         Update,
         restart_level
@@ -92,7 +96,6 @@ pub enum LevelState {
 // TODO Add custom levels to level selection menu.
 #[allow(dead_code)]
 #[derive(Component, Clone)]
-#[require(ParticleCount, LevelState)]
 pub enum Level {
     Default(usize),
     Custom(String),
@@ -101,26 +104,12 @@ pub enum Level {
 #[derive(Event)]
 pub struct SpawnLevel(pub Level);
 
-/// A system that spawns the main level.
 pub fn spawn_level(
     trigger: Trigger<SpawnLevel>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    player_config: Res<PlayerConfig>,
     levels: Res<Assets<LevelData>>,
     level_assets: Res<LevelAssets>,
-    music_query: Query<Entity, With<GameplayMusic>>,
-    music_assets: Res<MusicAssets>,
-    letterboxing: Res<Letterboxing>,
     mut commands: Commands,
 ) {
-    // Spawn screen bounds first
-    commands.spawn(screen_bounds(&letterboxing));
-
-    if music_query.is_empty() {
-        commands.spawn((gameplay_music(&music_assets), StateScoped(Screen::Gameplay)));
-    }
-
     let level_handle = match &trigger.0 {
         Level::Default(id) => level_assets.default.get(*id).unwrap(),
         Level::Custom(name) => level_assets.custom.get(name).unwrap(),
@@ -128,10 +117,46 @@ pub fn spawn_level(
 
     let level_data = levels.get(level_handle).unwrap();
 
+    commands.trigger(SpawnRawLevel {
+        data: level_data.clone(),
+        level: Some(trigger.0.clone()),
+    });
+}
+
+#[derive(Event)]
+pub struct SpawnRawLevel {
+    pub data: LevelData,
+    pub level: Option<Level>,
+}
+
+#[derive(Component)]
+#[require(ParticleCount, LevelState)]
+pub struct RawLevel(pub LevelData);
+
+/// A system that spawns the main level.
+pub fn spawn_raw_level(
+    mut trigger: Trigger<SpawnRawLevel>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    player_config: Res<PlayerConfig>,
+    music_query: Query<Entity, With<GameplayMusic>>,
+    music_assets: Res<MusicAssets>,
+    letterboxing: Res<Letterboxing>,
+    mut commands: Commands,
+) {
+    let level_data = std::mem::take(&mut trigger.data);
+
+    // Spawn screen bounds first
+    commands.spawn(screen_bounds(&letterboxing));
+
+    if music_query.is_empty() {
+        commands.spawn((gameplay_music(&music_assets), StateScoped(Screen::Gameplay)));
+    }
+
     let level = commands
         .spawn((
             Name::new("Level"),
-            trigger.0.clone(),
+            Maybe(trigger.level.clone()),
             Transform::default(),
             Visibility::default(),
             StateScoped(Screen::Gameplay),
@@ -181,6 +206,8 @@ pub fn spawn_level(
             parent: Some(level),
         });
     }
+
+    commands.entity(level).insert(RawLevel(level_data));
 }
 
 pub fn obstacle(
@@ -275,8 +302,8 @@ fn increase_particle_count(
 
 fn decrease_particle_count(
     mut events: EventReader<ParticleDespawned>,
-    mut level_query: Query<(Entity, &mut LevelState, &mut ParticleCount), With<Level>>,
-    mut player_query: Query<&mut Player, Without<Level>>,
+    mut level_query: Query<(Entity, &mut LevelState, &mut ParticleCount), With<RawLevel>>,
+    mut player_query: Query<&mut Player, Without<RawLevel>>,
     audio_assets: Res<LevelAudioAssets>,
     mut time_events: EventWriter<SetTimeScale>,
     mut time_override_events: EventWriter<SetTimeScaleOverride>,
@@ -335,14 +362,18 @@ fn tick_end_level_timer(
 
 fn restart_level(
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    level_query: Query<(Entity, &Level)>,
+    mut level_query: Query<(Entity, &mut RawLevel, Option<&Level>)>,
     audio_assets: Res<LevelAudioAssets>,
     mut commands: Commands,
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
-        let (entity, level) = level_query.single().unwrap();
+        let (entity, mut raw_level, level) = level_query.single_mut().unwrap();
+
         commands.entity(entity).despawn();
-        commands.trigger(SpawnLevel(level.clone()));
+        commands.trigger(SpawnRawLevel {
+            data: std::mem::take(&mut raw_level.0),
+            level: level.map(|x| x.clone()),
+        });
 
         commands.spawn((
             AudioPlayer(audio_assets.restart_sound.clone()),
@@ -357,13 +388,25 @@ struct EndLevel;
 
 fn end_level(
     mut events: EventReader<EndLevel>,
-    level_query: Query<(Entity, &Level)>,
+    level_query: Query<(Entity, Option<&Level>), With<RawLevel>>,
     level_assets: Res<LevelAssets>,
     mut end_game_events: EventWriter<EndGame>,
     mut commands: Commands,
+    editor_state: Res<EditorState>,
+    mut next_screen: ResMut<NextState<Screen>>,
 ) {
     if !events.is_empty() {
         let (entity, level) = level_query.single().unwrap();
+
+        let Some(level) = level else {
+            if editor_state.editing {
+                next_screen.set(Screen::Editor);
+            } else {
+                next_screen.set(Screen::Levels);
+            }
+
+            return;
+        };
 
         if let Level::Default(id) = level {
             let new_id = id + 1;

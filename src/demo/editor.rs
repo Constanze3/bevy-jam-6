@@ -4,359 +4,411 @@ use bevy_inspector_egui::{
     egui,
 };
 
-use crate::{Pause, camera::MainCamera, screens::Screen};
+use crate::{
+    camera::{GameplayCamera, Letterboxing, Size, letterbox},
+    screens::Screen,
+};
+
+use super::{
+    level::{
+        SpawnRawLevel,
+        level_data::{LevelData, ObstacleData, ParticleData},
+    },
+    particle::SpawnParticle,
+    player::{PlayerConfig, player},
+};
+
+mod particle_preview;
 
 pub(super) fn plugin(app: &mut App) {
-    app.init_state::<EditorState>()
-        .init_resource::<EditorSettings>()
-        .init_resource::<PlacementState>()
-        .add_systems(
-            EguiContextPass,
-            (
-                toggle_editor,
-                editor_ui.run_if(in_state(Screen::Editor)),
-                update_placement_preview.run_if(in_state(Screen::Editor)),
-            ),
-        );
+    app.init_resource::<EditorState>();
+    app.add_event::<EditorEvent>();
 
-    app.add_systems(Update, handle_editor_input.run_if(in_state(Screen::Editor)));
+    app.add_observer(spawn_level_preview);
+    app.add_systems(
+        OnEnter(Screen::Editor),
+        |mut commands: Commands, mut editor_state: ResMut<EditorState>| {
+            commands.trigger(SpawnLevelPreview);
+            editor_state.editing = true;
+        },
+    );
+    app.add_systems(EguiContextPass, editor_ui.run_if(in_state(Screen::Editor)));
+
+    app.add_systems(
+        Update,
+        (
+            handle_editor_event_exit,
+            handle_editor_event_save,
+            handle_editor_event_clear,
+            handle_editor_event_play,
+        )
+            .run_if(in_state(Screen::Editor)),
+    );
+
+    app.add_systems(Update, (object_placement).run_if(in_state(Screen::Editor)));
 }
+
+#[derive(Component)]
+pub struct LevelPreview;
 
 #[derive(Event)]
-pub struct SpawnEditor;
+pub struct SpawnLevelPreview;
 
-#[derive(States, Debug, Clone, Copy, Eq, PartialEq, Hash, Default)]
-pub enum EditorState {
-    #[default]
-    Disabled,
-    Enabled,
-}
-#[derive(Resource)]
-pub struct EditorSettings {
-    selected_tool: EditorTool,
-    atom_radius: f32,
-    atom_color: [f32; 3],
-    atom_velocity: f32,
-    obstacle_size: f32,
-}
+// basically spawn level but with preview objects
+pub fn spawn_level_preview(
+    _: Trigger<SpawnLevelPreview>,
+    level_preview_query: Query<Entity, With<LevelPreview>>,
+    editor_state: Res<EditorState>,
+    player_config: Res<PlayerConfig>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut commands: Commands,
+) {
+    // Delete previous level preview.
+    for previous_level_preview in level_preview_query.iter() {
+        commands.entity(previous_level_preview).despawn();
+    }
 
-impl Default for EditorSettings {
-    fn default() -> Self {
-        Self {
-            selected_tool: EditorTool::default(),
-            atom_radius: 30.0,
-            atom_color: [0.2, 0.7, 1.0],
-            atom_velocity: 200.0,
-            obstacle_size: 50.0,
-        }
+    let level_preview = commands
+        .spawn((
+            Name::new("Level Preview"),
+            LevelPreview,
+            Transform::default(),
+            Visibility::default(),
+            StateScoped(Screen::Editor),
+            children![player(
+                editor_state.level.player_spawn,
+                &mut meshes,
+                &mut materials,
+                &player_config
+            )],
+        ))
+        .id();
+
+    for obstacle_data in editor_state.level.obstacles.iter() {
+        let obstacle_data = obstacle_data.clone();
+
+        let material = materials.add(obstacle_data.flat_color_mesh.color());
+        let mesh = meshes.add(obstacle_data.flat_color_mesh.into_mesh());
+
+        let obstacle = commands
+            .spawn(obstacle_preview(obstacle_data.transform, material, mesh))
+            .id();
+
+        commands.entity(level_preview).add_child(obstacle);
+    }
+
+    for particle_data in editor_state.level.particles.iter() {
+        commands.trigger(SpawnParticle {
+            translation: particle_data.spawn_position,
+            particle: particle_data.particle.clone(),
+            spawn_with_invincible: false,
+            parent: Some(level_preview),
+        });
     }
 }
 
-#[derive(Debug, Default, PartialEq)]
-pub enum EditorTool {
+// specialized preview for a subparticle
+pub fn subparticle_preview() {}
+
+pub fn obstacle_preview(
+    transform: Transform,
+    material: Handle<ColorMaterial>,
+    mesh: Handle<Mesh>,
+) -> impl Bundle {
+    (
+        Name::new("Obstacle"),
+        transform,
+        Mesh2d(mesh),
+        MeshMaterial2d(material),
+    )
+}
+
+#[derive(Default, PartialEq, Eq)]
+enum EditorMode {
     #[default]
+    Place,
     Select,
-    PlaceAtom,
-    PlaceObstacle,
-    PlacePlayer,
+}
+
+#[derive(Default, PartialEq, Eq, Clone, Copy)]
+enum Object {
+    #[default]
+    Particle,
+    Obstacle,
+}
+
+#[derive(Component)]
+enum PreviewIndex {
+    Particle(Vec<usize>),
+    Obstacle(usize),
 }
 
 #[derive(Resource, Default)]
-pub struct PlacementState {
-    pub preview_entity: Option<Entity>,
-    pub placing: Option<EditorTool>,
+pub struct EditorState {
+    level: LevelData,
+    mode: EditorMode,
+    placement: Object,
+    selected: Option<PreviewIndex>,
+    pub editing: bool,
 }
 
-fn update_placement_preview(
+// particle selected -> show translation, Particle
+// obstacle selected -> show width, height, translation, rotation
+// player selected -> show vec2
+
+#[derive(Event, PartialEq, Eq)]
+enum EditorEvent {
+    Exit,
+    Save,
+    Load,
+    Clear,
+    Play,
+}
+
+fn handle_editor_event_exit(
+    mut events: EventReader<EditorEvent>,
+    mut editor_state: ResMut<EditorState>,
+    mut next_screen: ResMut<NextState<Screen>>,
+) {
+    for event in events.read() {
+        if *event == EditorEvent::Exit {
+            next_screen.set(Screen::Title);
+            editor_state.editing = false;
+        }
+    }
+}
+
+fn handle_editor_event_save(mut events: EventReader<EditorEvent>, editor_state: Res<EditorState>) {
+    for event in events.read() {
+        if *event == EditorEvent::Save {
+            println!(
+                "{}",
+                ron::ser::to_string_pretty(&editor_state.level, ron::ser::PrettyConfig::default())
+                    .unwrap(),
+            );
+        }
+    }
+}
+
+fn handle_editor_event_clear(
+    mut events: EventReader<EditorEvent>,
+    mut editor_state: ResMut<EditorState>,
     mut commands: Commands,
-    mut placement_state: ResMut<PlacementState>,
-    windows: Query<&Window>,
-    camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
 ) {
-    if let Some(_tool) = placement_state.placing.as_ref() {
-        let (camera, camera_transform) = camera_q
-            .single()
-            .expect("Expected exactly one camera in the scene");
-        let window = windows
-            .single()
-            .expect("Expected exactly one window in the scene");
-
-        if let Some(_cursor_pos) = window
-            .cursor_position()
-            .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor).ok())
-            .map(|ray| ray.origin.truncate())
-        {
-            // Spawn or move the preview entity
-            // let entity = if let Some(entity) = placement_state.preview_entity {
-            //     // Move existing preview
-            //     commands
-            //         .entity(entity)
-            //         .insert(Transform::from_translation(cursor_pos.extend(10.0)));
-            //     entity
-            // } else {
-            //     let particle_mesh = meshes.add(Circle::new(editor_settings.atom_radius));
-            //     let color = Color::srgb(
-            //         editor_settings.atom_color[0],
-            //         editor_settings.atom_color[1],
-            //         editor_settings.atom_color[2],
-            //     );
-            //     let particle_material = materials.add(color);
-
-            //     // Spawn new preview
-            //     let entity = match tool {
-            //         EditorTool::PlaceAtom => {
-            //              let bundle = particle(
-            //                  cursor_pos,
-            //                  false,
-            //                  Particle {
-            //                      kind: ParticleKind::Normal,
-            //                      radius: editor_settings.atom_radius,
-            //                      initial_velocity: Vec2::ZERO,
-            //                      subparticles: vec![
-            //                          Particle {
-            //                              kind: ParticleKind::Normal,
-            //                              radius: editor_settings.atom_radius,
-            //                              initial_velocity: vec2(0.0, -200.0),
-            //                              subparticles: vec![],
-            //                              mesh: particle_mesh.clone(),
-            //                              material: particle_material.clone(),
-            //                          },
-            //                          Particle {
-            //                              kind: ParticleKind::Normal,
-            //                              radius: editor_settings.atom_radius,
-            //                              initial_velocity: vec2(0.0, 200.0),
-            //                              subparticles: vec![],
-            //                              mesh: particle_mesh.clone(),
-            //                              material: particle_material.clone(),
-            //                          },
-            //                      ],
-            //                      mesh: particle_mesh.clone(),
-            //                      material: particle_material.clone(),
-            //                  },
-            //                  particle_assets.as_ref(),
-            //              );
-            //              commands.spawn(bundle).id()
-            //
-            //
-            //         }
-            //         EditorTool::PlaceObstacle => {
-            //             let bundle = obstacle(
-            //                 cursor_pos,
-            //                 editor_settings.obstacle_size,
-            //                 &mut meshes,
-            //                 &mut materials,
-            //             );
-            //             commands.spawn((bundle, Name::new("Preview"))).id()
-            //         }
-            //         EditorTool::PlacePlayer => {
-            //             let bundle = player(cursor_pos, 20.0, 7000.0, &mut meshes, &mut materials);
-            //             commands.spawn((bundle, Name::new("Preview"))).id()
-            //         }
-            //         _ => return,
-            //     };
-            //     placement_state.preview_entity = Some(entity);
-            //     entity
-            // };
-            // Make sure it's visible and at the right position
-            // commands
-            //     .entity(entity)
-            //     .insert(Transform::from_translation(cursor_pos.extend(10.0)));
-        }
-    } else if let Some(entity) = placement_state.preview_entity.take() {
-        // Remove preview if not placing
-        commands.entity(entity).despawn();
-    }
-}
-
-fn toggle_editor(
-    input: Res<ButtonInput<KeyCode>>,
-    mut editor_state: ResMut<NextState<EditorState>>,
-    mut pause_state: ResMut<NextState<Pause>>,
-    state: Res<State<EditorState>>,
-) {
-    if input.just_pressed(KeyCode::Tab) {
-        match state.get() {
-            EditorState::Disabled => {
-                println!("Enabling editor mode"); // Debug print
-                editor_state.set(EditorState::Enabled);
-                pause_state.set(Pause(true)); // Pause the game when editor is enabled
-            }
-            EditorState::Enabled => {
-                println!("Disabling editor mode"); // Debug print
-                editor_state.set(EditorState::Disabled);
-                pause_state.set(Pause(false)); // Unpause when editor is disabled
-            }
+    for event in events.read() {
+        if *event == EditorEvent::Clear {
+            editor_state.level = LevelData::default();
+            commands.trigger(SpawnLevelPreview);
         }
     }
 }
 
-fn editor_ui(mut contexts: EguiContexts, mut editor_settings: ResMut<EditorSettings>) {
-    egui::Window::new("Level Editor")
+fn handle_editor_event_play(
+    mut events: EventReader<EditorEvent>,
+    editor_state: Res<EditorState>,
+    mut next_screen: ResMut<NextState<Screen>>,
+    mut commands: Commands,
+) {
+    for event in events.read() {
+        if *event == EditorEvent::Play {
+            commands.trigger(SpawnRawLevel {
+                data: editor_state.level.clone(),
+                level: None,
+            });
+            next_screen.set(Screen::Gameplay);
+        }
+
+        break;
+    }
+}
+
+fn editor_ui(
+    mut contexts: EguiContexts,
+    mut state: ResMut<EditorState>,
+    mut events: EventWriter<EditorEvent>,
+) {
+    egui::Window::new("Editor")
         .default_pos([10.0, 10.0])
         .collapsible(true)
         .interactable(true)
         .movable(true)
         .show(contexts.ctx_mut(), |ui| {
-            ui.heading("Tools");
+            let style = ui.style_mut();
+            style
+                .text_styles
+                .get_mut(&egui::TextStyle::Heading)
+                .unwrap()
+                .size = 24.0;
+
+            style
+                .text_styles
+                .get_mut(&egui::TextStyle::Body)
+                .unwrap()
+                .size = 20.0;
+            style
+                .text_styles
+                .get_mut(&egui::TextStyle::Button)
+                .unwrap()
+                .size = 20.0;
 
             ui.horizontal(|ui| {
-                ui.selectable_value(
-                    &mut editor_settings.selected_tool,
-                    EditorTool::Select,
-                    "🖱 Select",
-                );
-                ui.selectable_value(
-                    &mut editor_settings.selected_tool,
-                    EditorTool::PlaceAtom,
-                    "⚛  Atom",
-                );
-                ui.selectable_value(
-                    &mut editor_settings.selected_tool,
-                    EditorTool::PlaceObstacle,
-                    "⬜ Obstacle",
-                );
-                ui.selectable_value(
-                    &mut editor_settings.selected_tool,
-                    EditorTool::PlacePlayer,
-                    "● Player",
-                );
+                if ui.button("Save").clicked() {
+                    events.write(EditorEvent::Save);
+                }
+
+                if ui.button("Load").clicked() {
+                    events.write(EditorEvent::Load);
+                }
+
+                if ui.button("Clear").clicked() {
+                    events.write(EditorEvent::Clear);
+                }
             });
 
             ui.separator();
-            ui.heading("Properties");
 
-            match editor_settings.selected_tool {
-                EditorTool::PlaceAtom => {
+            egui::Grid::new("name_author_grid")
+                .num_columns(2)
+                .spacing([10.0, 8.0])
+                .show(ui, |ui| {
+                    ui.label("Name:");
+                    ui.add(egui::TextEdit::singleline(&mut state.level.name).desired_width(150.0));
+                    ui.end_row();
+
+                    let author = &mut String::new();
+                    if let Some(a) = state.level.author.clone() {
+                        *author = a;
+                    }
+
+                    ui.label("Author:");
                     ui.add(
-                        egui::Slider::new(&mut editor_settings.atom_radius, 10.0..=100.0)
-                            .text("Atom Radius"),
+                        egui::TextEdit::singleline(author)
+                            .hint_text("None")
+                            .desired_width(150.0),
                     );
-                    ui.color_edit_button_rgb(&mut editor_settings.atom_color);
-                    ui.add(
-                        egui::Slider::new(&mut editor_settings.atom_velocity, 0.0..=500.0)
-                            .text("Sub-Particle Velocity"),
-                    );
+
+                    state.level.author = (author != "").then_some(author.clone());
+                });
+
+            ui.separator();
+
+            ui.horizontal(|ui| {
+                ui.selectable_value(&mut state.mode, EditorMode::Place, "Place");
+                ui.selectable_value(&mut state.mode, EditorMode::Select, "Select");
+            });
+
+            match state.mode {
+                EditorMode::Place => {
+                    state.selected = None;
+
+                    ui.horizontal(|ui| {
+                        ui.selectable_value(&mut state.placement, Object::Particle, "⚛  Particle");
+                        ui.selectable_value(&mut state.placement, Object::Obstacle, "📦 Obstacle");
+                    });
                 }
-                EditorTool::PlaceObstacle => {
-                    ui.add(
-                        egui::Slider::new(&mut editor_settings.obstacle_size, 10.0..=200.0)
-                            .text("Obstacle Size"),
-                    );
+                EditorMode::Select => {
+                    if state.selected.is_none() {
+                        ui.label("Nothing selected");
+                    }
                 }
-                _ => {}
             }
 
             ui.separator();
-            ui.heading("Level");
 
-            if ui.button("Save Level").clicked() {
-                // TODO: Implement save
+            if ui.button("Play").clicked() {
+                events.write(EditorEvent::Play);
             }
-            if ui.button("Load Level").clicked() {
-                // TODO: Implement load
-            }
-            if ui.button("New Level").clicked() {
-                // TODO: Implement clear
+
+            ui.separator();
+
+            if ui.button("Quit to title").clicked() {
+                events.write(EditorEvent::Exit);
             }
         });
 }
 
-fn handle_editor_input(
-    mut commands: Commands,
-    buttons: Res<ButtonInput<MouseButton>>,
-    windows: Query<&Window>,
-    camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
-    editor_settings: Res<EditorSettings>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+fn mouse_world_position(
+    window_query: &Query<&Window>,
+    camera_query: &Query<(&Camera, &GlobalTransform), With<GameplayCamera>>,
+    letterboxing: &Letterboxing,
+) -> Option<Vec2> {
+    let window = window_query.single().unwrap();
+    let (camera, camera_transform) = camera_query.single().unwrap();
+
+    let window_size = Size::new(window.width(), window.height());
+    let actual_size = letterbox(window_size, letterboxing.aspect_ratio);
+
+    let horizontal_band = (window_size.width - actual_size.width) / 2.0;
+    let vertical_band = (window_size.height - actual_size.height) / 2.0;
+
+    let Some(pos) = window.cursor_position() else {
+        return None;
+    };
+
+    if pos.x < horizontal_band || horizontal_band + actual_size.width < pos.x {
+        return None;
+    }
+
+    if pos.y < vertical_band || vertical_band + actual_size.height < pos.y {
+        return None;
+    }
+
+    let actual_pos = vec2(pos.x - horizontal_band, pos.y - vertical_band);
+
+    let mut normalized = actual_pos / vec2(actual_size.width, actual_size.height);
+    normalized.y = 1.0 - normalized.y;
+
+    let ndc = 2.0 * normalized - Vec2::ONE;
+
+    let world_pos = camera
+        .ndc_to_world(camera_transform, ndc.extend(1.0))
+        .map(|p| p.xy());
+
+    world_pos
+}
+
+fn object_placement(
+    mut editor_state: ResMut<EditorState>,
     mut contexts: EguiContexts,
+    mouse_buttons: Res<ButtonInput<MouseButton>>,
+    window_query: Query<&Window>,
+    camera_query: Query<(&Camera, &GlobalTransform), With<GameplayCamera>>,
+    letterboxing: Res<Letterboxing>,
+    mut commands: Commands,
 ) {
+    if editor_state.mode != EditorMode::Place {
+        return;
+    }
+
+    if !mouse_buttons.just_pressed(MouseButton::Left) {
+        return;
+    }
+
+    // Ignore clicks over editor.
     let ctx = contexts.ctx_mut();
-    if buttons.just_pressed(MouseButton::Left) && !ctx.is_pointer_over_area() {
-        println!("Left click detected in editor mode - not over UI"); // Debug print
+    if ctx.is_pointer_over_area() {
+        return;
+    }
 
-        let (camera, camera_transform) = camera_q
-            .single()
-            .expect("Expected exactly one camera in the scene");
-        let window = windows
-            .single()
-            .expect("Expected exactly one window in the scene");
+    let Some(position) = mouse_world_position(&window_query, &camera_query, &letterboxing) else {
+        return;
+    };
 
-        if let Some(cursor_pos) = window.cursor_position() {
-            println!("Cursor position: {:?}", cursor_pos); // Debug print
+    match editor_state.placement {
+        Object::Particle => {
+            editor_state
+                .level
+                .particles
+                .push(ParticleData::default_at(position));
         }
-
-        if let Some(world_position) = window
-            .cursor_position()
-            .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor).ok())
-            .map(|ray| ray.origin.truncate())
-        {
-            println!("World position: {:?}", world_position); // Debug print
-            println!("Editor tool selected: {:?}", editor_settings.selected_tool); // Debug print
-            match editor_settings.selected_tool {
-                EditorTool::PlaceAtom => {
-                    // println!("Spawning atom at: {:?}", world_position); // Debug print
-                    // let particle_mesh = meshes.add(Circle::new(editor_settings.atom_radius));
-                    // let color = Color::srgb(
-                    //     editor_settings.atom_color[0],
-                    //     editor_settings.atom_color[1],
-                    //     editor_settings.atom_color[2],
-                    // );
-                    // let particle_material = materials.add(color);
-
-                    // let bundle = particle(
-                    //     world_position,
-                    //     false,
-                    //     Particle {
-                    //         kind: ParticleKind::Normal,
-                    //         radius: editor_settings.atom_radius,
-                    //         initial_velocity: Vec2::ZERO,
-                    //         subparticles: vec![
-                    //             Particle {
-                    //                 kind: ParticleKind::Normal,
-                    //                 radius: editor_settings.atom_radius,
-                    //                 initial_velocity: vec2(0.0, -200.0),
-                    //                 subparticles: vec![],
-                    //                 mesh: particle_mesh.clone(),
-                    //                 material: particle_material.clone(),
-                    //             },
-                    //             Particle {
-                    //                 kind: ParticleKind::Normal,
-                    //                 radius: editor_settings.atom_radius,
-                    //                 initial_velocity: vec2(0.0, 200.0),
-                    //                 subparticles: vec![],
-                    //                 mesh: particle_mesh.clone(),
-                    //                 material: particle_material.clone(),
-                    //             },
-                    //         ],
-                    //         mesh: particle_mesh.clone(),
-                    //         material: particle_material.clone(),
-                    //     },
-                    //     particle_assets.as_ref(),
-                    // );
-                    // commands.spawn(bundle);
-                }
-                EditorTool::PlaceObstacle => {
-                    // commands.spawn(obstacle(
-                    //     world_position,
-                    //     editor_settings.obstacle_size,
-                    //     &mut meshes,
-                    //     &mut materials,
-                    // ));
-                }
-                EditorTool::PlacePlayer => {
-                    // commands.spawn(player(
-                    //     world_position,
-                    //     20.0,
-                    //     7000.0,
-                    //     &mut meshes,
-                    //     &mut materials,
-                    // ));
-                }
-                EditorTool::Select => {
-                    // TODO: Implement selection
-                } // ... rest of the match cases ...
-            }
+        Object::Obstacle => {
+            editor_state
+                .level
+                .obstacles
+                .push(ObstacleData::default_at(position));
         }
     }
+
+    commands.trigger(SpawnLevelPreview);
 }

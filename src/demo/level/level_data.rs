@@ -73,10 +73,17 @@ pub struct ParticleData {
 }
 
 impl ParticleData {
-    fn new(spawn_position: Vec2, particle: Particle) -> Self {
+    pub fn new(spawn_position: Vec2, particle: Particle) -> Self {
         Self {
             spawn_position,
             particle,
+        }
+    }
+
+    pub fn default_at(translation: Vec2) -> Self {
+        Self {
+            spawn_position: translation,
+            particle: Particle::default(),
         }
     }
 }
@@ -104,9 +111,19 @@ impl ObstacleData {
             is_killer: killer,
         }
     }
+
+    pub fn default_at(translation: Vec2) -> Self {
+        let transform = Transform::from_translation(translation.extend(0.0));
+        let color = Color::WHITE;
+        let width = 50.0;
+        let height = 50.0;
+        let killer = false;
+
+        Self::rectangle(transform, color, width, height, killer)
+    }
 }
 
-#[derive(Asset, TypePath, Clone, Serialize, Deserialize)]
+#[derive(Asset, TypePath, Clone, Serialize, Deserialize, Default)]
 pub struct LevelData {
     pub name: String,
     pub author: Option<String>,

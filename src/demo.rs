@@ -7,6 +7,7 @@ use bevy::prelude::*;
 
 mod drag_indicator;
 mod drag_input;
+pub mod editor;
 mod killer;
 pub mod level;
 mod particle;
@@ -16,6 +17,7 @@ pub mod time_scale;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((
+        editor::plugin,
         level::plugin,
         player::plugin,
         drag_input::plugin,

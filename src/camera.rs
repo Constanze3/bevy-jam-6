@@ -66,7 +66,7 @@ impl Default for Letterboxing {
 
 /// Calulates the letterboxed size for a certain screen size
 /// and aspect ratio.
-fn letterbox(size: Size<f32>, aspect_ratio: Size<f32>) -> Size<f32> {
+pub fn letterbox(size: Size<f32>, aspect_ratio: Size<f32>) -> Size<f32> {
     let sx = size.width / aspect_ratio.width;
     let sy = size.height / aspect_ratio.height;
     let s = sx.min(sy);

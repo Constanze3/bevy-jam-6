@@ -17,6 +17,7 @@ mod theme;
 
 use bevy::{asset::AssetMetaCheck, prelude::*};
 use bevy_enoki::EnokiPlugin;
+use bevy_inspector_egui::bevy_egui::EguiPlugin;
 use bevy_rapier2d::{prelude::*, rapier::prelude::IntegrationParameters};
 
 use crate::demo::particle_effect::ParticleEffectPlugin;
@@ -65,6 +66,10 @@ impl Plugin for AppPlugin {
         ));
 
         app.add_plugins(EnokiPlugin);
+
+        app.add_plugins(EguiPlugin {
+            enable_multipass_for_primary_context: true,
+        });
 
         // app.add_plugins(HanabiPlugin);
         // Add other plugins.

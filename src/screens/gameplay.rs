@@ -21,8 +21,6 @@ pub(super) fn plugin(app: &mut App) {
         |mut commands: Commands, selected_level: Res<SelectedLevel>| {
             if let Some(level) = selected_level.0.clone() {
                 commands.trigger(SpawnLevel(level))
-            } else {
-                unreachable!("When gameplay starts a level should be selected.");
             }
         },
     );

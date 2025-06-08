@@ -31,6 +31,7 @@ fn spawn_main_menu(mut commands: Commands) {
                 ..default()
             },
             widget::button("Play", enter_levels_screen),
+            widget::button("Editor", enter_editor_screen),
             widget::button("Settings", open_settings_menu),
             widget::button("Credits", open_credits_menu),
             widget::button("Exit", exit_app),
@@ -57,6 +58,10 @@ fn spawn_main_menu(mut commands: Commands) {
 
 fn enter_levels_screen(_: Trigger<Pointer<Click>>, mut next_screen: ResMut<NextState<Screen>>) {
     next_screen.set(Screen::Levels);
+}
+
+fn enter_editor_screen(_: Trigger<Pointer<Click>>, mut next_screen: ResMut<NextState<Screen>>) {
+    next_screen.set(Screen::Editor);
 }
 
 fn open_settings_menu(_: Trigger<Pointer<Click>>, mut next_menu: ResMut<NextState<Menu>>) {

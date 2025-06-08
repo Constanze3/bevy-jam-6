@@ -1,5 +1,6 @@
 //! The game's main screen states and transitions between them.
 
+
 mod end;
 pub mod gameplay;
 mod levels;
@@ -29,6 +30,7 @@ pub enum Screen {
     #[default]
     Splash,
     Title,
+    Editor,
     Levels,
     Loading,
     Gameplay,

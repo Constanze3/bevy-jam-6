@@ -51,8 +51,12 @@ fn killer_collision_handler(
 
         let mut helper_lens: QueryLens<(Option<&RigidBody>, &ChildOf)> = query.transmute_lens();
         let helper_query = helper_lens.query();
-        let e1 = find_rigidbody_ancestor(e1, &helper_query).unwrap();
-        let e2 = find_rigidbody_ancestor(e2, &helper_query).unwrap();
+        let Some(e1) = find_rigidbody_ancestor(e1, &helper_query) else {
+            return;
+        };
+        let Some(e2) = find_rigidbody_ancestor(e2, &helper_query) else {
+            return;
+        };
 
         let (e1_killer, e1_player, _, _) = query.get(e1).unwrap();
         let (e2_killer, e2_player, _, _) = query.get(e2).unwrap();
