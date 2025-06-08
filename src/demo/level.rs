@@ -1,5 +1,8 @@
 //! Spawn the main level.
 
+use std::time::Duration;
+
+use bevy::audio::Volume;
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 use level_data::LevelData;
@@ -8,6 +11,8 @@ use level_loading::LevelAssets;
 pub mod level_data;
 pub mod level_loading;
 
+use crate::asset_tracking::LoadResource;
+use crate::audio::{SoundEffect, sound_effect};
 use crate::demo::{
     drag_indicator::drag_indicator, killer::Killer, particle::SpawnParticle, player::PlayerConfig,
 };
@@ -15,15 +20,20 @@ use crate::{
     AppSystems, PausableSystems,
     audio::music::{GameplayMusic, MusicAssets, gameplay_music},
     camera::Letterboxing,
+    demo::particle::{ParticleDespawned, ParticleSpawned},
     demo::player::player,
     external::maybe::Maybe,
     screens::Screen,
 };
 
-use super::particle::{ParticleDespawned, ParticleSpawned};
+use super::player::Player;
+use super::time_scale::{SetTimeScale, SetTimeScaleOverride, TimeScaleKind};
 
 pub(super) fn plugin(app: &mut App) {
+    app.register_type::<LevelAudioAssets>();
     app.register_type::<ParticleCount>();
+
+    app.load_resource::<LevelAudioAssets>();
 
     app.add_plugins((level_data::plugin, level_loading::plugin));
     app.add_observer(spawn_level);
@@ -40,29 +50,53 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (
-            increase_particle_count,
-            decrease_particle_count,
-            end_level,
-            end_game,
+            (increase_particle_count, decrease_particle_count).chain(),
+            (tick_end_level_timer, end_level, end_game).chain(),
         )
-            .chain()
             .run_if(in_state(Screen::Gameplay))
             .in_set(AppSystems::Update),
     );
 }
 
-// TODO Add custom levels to level selection menu.
-#[allow(dead_code)]
-#[derive(Component, Clone)]
-#[require(ParticleCount)]
-pub enum Level {
-    Default(usize),
-    Custom(String),
+#[derive(Resource, Asset, Clone, Reflect)]
+#[reflect(Resource)]
+struct LevelAudioAssets {
+    #[dependency]
+    restart_sound: Handle<AudioSource>,
+    #[dependency]
+    level_completed_sound: Handle<AudioSource>,
+}
+
+impl FromWorld for LevelAudioAssets {
+    fn from_world(world: &mut World) -> Self {
+        let assets = world.resource::<AssetServer>();
+
+        Self {
+            restart_sound: assets.load("audio/sound_effects/restart.ogg"),
+            level_completed_sound: assets.load("audio/sound_effects/level_completed.ogg"),
+        }
+    }
 }
 
 #[derive(Component, Default, Reflect)]
 #[reflect(Component)]
 struct ParticleCount(usize);
+
+#[derive(Component, Default, PartialEq, Eq)]
+pub enum LevelState {
+    #[default]
+    Playing,
+    Ended,
+}
+
+// TODO Add custom levels to level selection menu.
+#[allow(dead_code)]
+#[derive(Component, Clone)]
+#[require(ParticleCount, LevelState)]
+pub enum Level {
+    Default(usize),
+    Custom(String),
+}
 
 #[derive(Event)]
 pub struct SpawnLevel(pub Level);
@@ -226,9 +260,14 @@ fn screen_bounds(letterboxing: &Letterboxing) -> impl Bundle {
 
 fn increase_particle_count(
     mut events: EventReader<ParticleSpawned>,
-    mut particle_count_query: Query<&mut ParticleCount>,
+    mut level_query: Query<(&LevelState, &mut ParticleCount)>,
 ) {
-    let mut particle_count = particle_count_query.single_mut().unwrap();
+    let (level_state, mut particle_count) = level_query.single_mut().unwrap();
+
+    if *level_state == LevelState::Ended {
+        return;
+    }
+
     for _ in events.read() {
         particle_count.0 += 1;
     }
@@ -236,28 +275,80 @@ fn increase_particle_count(
 
 fn decrease_particle_count(
     mut events: EventReader<ParticleDespawned>,
-    mut particle_count_query: Query<&mut ParticleCount>,
-    mut end_level_events: EventWriter<EndLevel>,
+    mut level_query: Query<(Entity, &mut LevelState, &mut ParticleCount), With<Level>>,
+    mut player_query: Query<&mut Player, Without<Level>>,
+    audio_assets: Res<LevelAudioAssets>,
+    mut time_events: EventWriter<SetTimeScale>,
+    mut time_override_events: EventWriter<SetTimeScaleOverride>,
+    mut commands: Commands,
 ) {
-    let mut particle_count = particle_count_query.single_mut().unwrap();
+    let (level_entity, mut level_state, mut particle_count) = level_query.single_mut().unwrap();
+    if *level_state == LevelState::Ended {
+        return;
+    }
+
     for _ in events.read() {
         particle_count.0 -= 1;
     }
 
     if particle_count.0 == 0 {
-        end_level_events.write(EndLevel);
+        commands.entity(level_entity).with_children(|parent| {
+            parent.spawn(EndLevelTimer::new());
+            parent.spawn(sound_effect(audio_assets.level_completed_sound.clone()));
+        });
+
+        *level_state = LevelState::Ended;
+
+        if let Ok(mut player) = player_query.single_mut() {
+            player.can_move = false;
+        }
+
+        time_override_events.write(SetTimeScaleOverride(None));
+        time_events.write(SetTimeScale(TimeScaleKind::Normal));
+    }
+}
+
+#[derive(Component)]
+struct EndLevelTimer(Timer);
+
+impl EndLevelTimer {
+    pub fn new() -> Self {
+        Self(Timer::new(Duration::from_secs_f32(2.0), TimerMode::Once))
+    }
+}
+
+fn tick_end_level_timer(
+    mut query: Query<(Entity, &mut EndLevelTimer)>,
+    time: Res<Time>,
+    mut end_level_events: EventWriter<EndLevel>,
+    mut commands: Commands,
+) {
+    for (entity, mut timer) in query.iter_mut() {
+        timer.0.tick(time.delta());
+
+        if timer.0.just_finished() {
+            end_level_events.write(EndLevel);
+            commands.entity(entity).despawn();
+        }
     }
 }
 
 fn restart_level(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     level_query: Query<(Entity, &Level)>,
+    audio_assets: Res<LevelAudioAssets>,
     mut commands: Commands,
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
         let (entity, level) = level_query.single().unwrap();
         commands.entity(entity).despawn();
         commands.trigger(SpawnLevel(level.clone()));
+
+        commands.spawn((
+            AudioPlayer(audio_assets.restart_sound.clone()),
+            PlaybackSettings::DESPAWN.with_volume(Volume::Linear(2.5)),
+            SoundEffect,
+        ));
     }
 }
 
@@ -265,7 +356,7 @@ fn restart_level(
 struct EndLevel;
 
 fn end_level(
-    events: EventReader<EndLevel>,
+    mut events: EventReader<EndLevel>,
     level_query: Query<(Entity, &Level)>,
     level_assets: Res<LevelAssets>,
     mut end_game_events: EventWriter<EndGame>,
@@ -290,13 +381,15 @@ fn end_level(
 
         commands.entity(entity).despawn();
     }
+    events.clear();
 }
 
 #[derive(Event)]
 struct EndGame;
 
-fn end_game(events: EventReader<EndGame>, mut next_screen: ResMut<NextState<Screen>>) {
+fn end_game(mut events: EventReader<EndGame>, mut next_screen: ResMut<NextState<Screen>>) {
     if !events.is_empty() {
         next_screen.set(Screen::End);
     }
+    events.clear();
 }

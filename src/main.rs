@@ -17,7 +17,6 @@ mod theme;
 
 use bevy::{asset::AssetMetaCheck, prelude::*};
 use bevy_enoki::EnokiPlugin;
-// use bevy_hanabi::HanabiPlugin;
 use bevy_rapier2d::{prelude::*, rapier::prelude::IntegrationParameters};
 
 use crate::demo::particle_effect::ParticleEffectPlugin;
