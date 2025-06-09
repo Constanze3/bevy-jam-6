@@ -23,7 +23,7 @@ use crate::{
         player::{PlayerConfig, player},
     },
     external::maybe::Maybe,
-    screens::Screen,
+    screens::{Screen, gameplay::SelectedLevel},
 };
 
 use super::particle::{
@@ -344,6 +344,7 @@ fn handle_editor_event_play(
     mut events: EventReader<EditorEvent>,
     editor_state: Res<EditorState>,
     mut next_screen: ResMut<NextState<Screen>>,
+    mut selected_level: ResMut<SelectedLevel>,
     mut commands: Commands,
 ) {
     if let Some(event) = events.read().next() {
@@ -352,6 +353,7 @@ fn handle_editor_event_play(
                 data: editor_state.level.clone(),
                 level: None,
             });
+            selected_level.0 = None;
             next_screen.set(Screen::Gameplay);
         }
     }
