@@ -372,7 +372,7 @@ fn particle_ui(
     superparticle: bool,
     id: usize,
     particle: &mut Particle,
-) -> Option<Option<usize>> {
+) -> Option<usize> {
     let mut to_delete = None;
 
     let name = {
@@ -387,7 +387,7 @@ fn particle_ui(
         .default_open(false)
         .show(ui, |ui| {
             if ui.button("Delete").clicked() {
-                to_delete = Some(Some(id));
+                to_delete = Some(id);
             }
 
             egui::Grid::new(format!("{}_grid", id))
@@ -423,17 +423,13 @@ fn particle_ui(
             egui::CollapsingHeader::new("Subparticles")
                 .default_open(false)
                 .show(ui, |ui| {
-                    let mut del = None;
+                    let mut deleted = None;
                     for (i, subparticle) in particle.subparticles.iter_mut().enumerate() {
-                        del = particle_ui(ui, false, i, subparticle);
+                        deleted = particle_ui(ui, false, i, subparticle);
                     }
 
-                    if let Some(del) = del {
-                        if let Some(del) = del {
-                            particle.subparticles.remove(del);
-                        }
-
-                        to_delete = Some(None);
+                    if let Some(deleted) = deleted {
+                        particle.subparticles.remove(deleted);
                     }
                 });
 
@@ -541,12 +537,10 @@ fn editor_ui(
                                     ui.label("Position:");
                                     vec2_input_ui(ui, &mut particle_data.spawn_position);
 
-                                    if let Some(del) =
-                                        particle_ui(ui, true, index, &mut particle_data.particle)
+                                    if particle_ui(ui, true, index, &mut particle_data.particle)
+                                        .is_some()
                                     {
-                                        if del.is_some() {
-                                            state.level.particles.remove(index);
-                                        }
+                                        state.level.particles.remove(index);
                                         state.selected = None;
                                         return;
                                     }
