@@ -88,26 +88,22 @@ impl ParticleData {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct ObstacleData {
     pub transform: Transform,
-    pub flat_color_mesh: FlatColorMesh,
-    pub collider: Collider,
+    pub color: Color,
+    pub width: f32,
+    pub height: f32,
     pub is_killer: bool,
 }
 
 impl ObstacleData {
-    pub fn rectangle(
-        transform: Transform,
-        color: Color,
-        width: f32,
-        height: f32,
-        killer: bool,
-    ) -> Self {
+    pub fn new(transform: Transform, color: Color, width: f32, height: f32, killer: bool) -> Self {
         Self {
             transform,
-            flat_color_mesh: FlatColorMesh::new(color, Rectangle::new(width, height)),
-            collider: Collider::cuboid(width / 2.0, height / 2.0),
+            color,
+            width,
+            height,
             is_killer: killer,
         }
     }
@@ -119,7 +115,7 @@ impl ObstacleData {
         let height = 50.0;
         let killer = false;
 
-        Self::rectangle(transform, color, width, height, killer)
+        Self::new(transform, color, width, height, killer)
     }
 }
 
@@ -184,7 +180,7 @@ impl LevelData {
                     },
                 ),
             ],
-            obstacles: vec![ObstacleData::rectangle(
+            obstacles: vec![ObstacleData::new(
                 Transform::from_translation(vec3(100.0, 0.0, 0.0)),
                 Color::linear_rgb(1.0, 1.0, 1.0),
                 50.0,

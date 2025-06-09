@@ -48,7 +48,7 @@ pub struct PlayerConfig {
 impl Default for PlayerConfig {
     fn default() -> Self {
         Self {
-            local_z: 0.0,
+            local_z: -1.0,
             radius: 20.0,
             color: Color::hsl(0.0, 0.95, 0.7),
             force_scalar: 7000.0,
@@ -87,9 +87,9 @@ pub fn player(
         Name::new("Player"),
         Transform::from_translation(translation.extend(0.0)),
         Player { can_move: true },
+        Mesh2d(mesh),
+        MeshMaterial2d(material),
         (
-            Mesh2d(mesh),
-            MeshMaterial2d(material),
             RigidBody::Dynamic,
             Ccd::enabled(),
             Sleeping::disabled(),

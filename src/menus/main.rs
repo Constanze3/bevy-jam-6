@@ -50,6 +50,7 @@ fn spawn_main_menu(mut commands: Commands) {
                 ..default()
             },
             widget::button("Play", enter_levels_screen),
+            widget::button("Editor", enter_editor_screen),
             widget::button("Settings", open_settings_menu),
             widget::button("Credits", open_credits_menu),
         ],

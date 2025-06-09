@@ -74,6 +74,9 @@ pub fn letterbox(size: Size<f32>, aspect_ratio: Size<f32>) -> Size<f32> {
     Size::new(s * aspect_ratio.width, s * aspect_ratio.height)
 }
 
+#[derive(Component)]
+pub struct GameplayRenderTarget(pub Handle<Image>);
+
 fn spawn_camera(
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
@@ -110,6 +113,7 @@ fn spawn_camera(
     commands.spawn((
         Name::new("Gameplay Camera"),
         GameplayCamera,
+        GameplayRenderTarget(image_handle.clone()),
         Camera2d,
         Projection::Orthographic(OrthographicProjection {
             scaling_mode: bevy::render::camera::ScalingMode::Fixed {
@@ -150,6 +154,7 @@ fn spawn_camera(
             ..default()
         },
         BackgroundColor(Color::srgb(0.0, 0.0, 0.0)),
+        Pickable::IGNORE,
         children![(
             GameplayNode,
             Node {
@@ -157,7 +162,8 @@ fn spawn_camera(
                 height: Val::Px(size.height),
                 ..default()
             },
-            children![ImageNode::new(image_handle)]
+            Pickable::IGNORE,
+            children![(ImageNode::new(image_handle), Pickable::IGNORE)]
         )],
         RenderLayers::layer(1),
     ));

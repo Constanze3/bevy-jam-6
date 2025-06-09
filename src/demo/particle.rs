@@ -25,8 +25,8 @@ use super::{
     time_scale::{SetTimeScale, TimeScaleKind},
 };
 
-mod arrows;
-mod invincible;
+pub mod arrows;
+pub mod invincible;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((invincible::plugin, arrows::plugin));
@@ -78,8 +78,8 @@ pub(super) fn plugin(app: &mut App) {
 #[derive(Resource, Reflect)]
 #[reflect(Resource)]
 pub struct ParticleConfig {
-    local_z: f32,
-    invincibility_duration: Duration,
+    pub local_z: f32,
+    pub invincibility_duration: Duration,
 }
 
 impl Default for ParticleConfig {

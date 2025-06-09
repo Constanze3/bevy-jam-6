@@ -71,6 +71,8 @@ impl Plugin for AppPlugin {
             enable_multipass_for_primary_context: true,
         });
 
+        app.add_plugins(MeshPickingPlugin);
+
         // app.add_plugins(HanabiPlugin);
         // Add other plugins.
         app.add_plugins((

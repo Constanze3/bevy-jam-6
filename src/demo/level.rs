@@ -180,17 +180,15 @@ pub fn spawn_raw_level(
         .id();
 
     for obstacle_data in level_data.obstacles.iter() {
-        let obstacle_data = obstacle_data.clone();
-
-        let material = materials.add(obstacle_data.flat_color_mesh.color());
-        let mesh = meshes.add(obstacle_data.flat_color_mesh.into_mesh());
+        let material = materials.add(obstacle_data.color);
+        let mesh = meshes.add(Rectangle::new(obstacle_data.width, obstacle_data.height));
 
         let obstacle = commands
             .spawn(obstacle(
                 obstacle_data.transform,
                 material,
                 mesh,
-                obstacle_data.collider,
+                Collider::cuboid(obstacle_data.width / 2.0, obstacle_data.height / 2.0),
                 obstacle_data.is_killer,
             ))
             .id();
@@ -372,7 +370,7 @@ fn restart_level(
         commands.entity(entity).despawn();
         commands.trigger(SpawnRawLevel {
             data: std::mem::take(&mut raw_level.0),
-            level: level.map(|x| x.clone()),
+            level: level.cloned(),
         });
 
         commands.spawn((
