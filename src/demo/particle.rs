@@ -161,6 +161,7 @@ pub fn particle(
         Mesh2d(mesh),
         MeshMaterial2d(material),
         RigidBody::Dynamic,
+        Ccd::enabled(),
         Restitution::coefficient(0.5),
         Collider::ball(particle.radius),
         children![(
