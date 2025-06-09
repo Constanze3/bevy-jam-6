@@ -454,6 +454,10 @@ fn editor_ui(
         .show(contexts.ctx_mut(), |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 ui.horizontal(|ui| {
+                    if ui.button("Play").clicked() {
+                        events.write(EditorEvent::Play);
+                    }
+
                     if ui.button("Copy to Clipboard").clicked() {
                         events.write(EditorEvent::Print);
                     }
@@ -462,6 +466,12 @@ fn editor_ui(
                         events.write(EditorEvent::Clear);
                     }
                 });
+
+                ui.separator();
+
+                if ui.button("Quit to title").clicked() {
+                    events.write(EditorEvent::Exit);
+                }
 
                 ui.separator();
 
@@ -498,7 +508,6 @@ fn editor_ui(
                 });
 
                 ui.separator();
-                ui.add_space(12.0);
 
                 match state.mode {
                     EditorMode::Place => {
@@ -542,7 +551,6 @@ fn editor_ui(
                                     {
                                         state.level.particles.remove(index);
                                         state.selected = None;
-                                        return;
                                     }
                                 }
                                 PreviewIndex::Obstacle(index) => {
@@ -603,19 +611,6 @@ fn editor_ui(
                             ui.label("Nothing selected");
                         }
                     }
-                }
-
-                ui.add_space(12.0);
-                ui.separator();
-
-                if ui.button("Play").clicked() {
-                    events.write(EditorEvent::Play);
-                }
-
-                ui.separator();
-
-                if ui.button("Quit to title").clicked() {
-                    events.write(EditorEvent::Exit);
                 }
             });
         });
