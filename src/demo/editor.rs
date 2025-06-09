@@ -51,7 +51,7 @@ pub(super) fn plugin(app: &mut App) {
     );
 
     app.add_systems(
-        Update,
+        EguiContextPass,
         (
             handle_editor_event_exit,
             handle_editor_event_print,
@@ -481,6 +481,8 @@ fn editor_ui(
 
                     if ui.button("Clear").clicked() {
                         events.write(EditorEvent::Clear);
+                        state.selected = None;
+                        return;
                     }
                 });
 
@@ -488,6 +490,8 @@ fn editor_ui(
 
                 if ui.button("Load").clicked() {
                     events.write(EditorEvent::Load);
+                    state.selected = None;
+                    return;
                 }
 
                 egui::collapsing_header::CollapsingHeader::new("Load Data")

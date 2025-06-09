@@ -19,7 +19,7 @@ pub struct LevelHandles {
 
 impl FromWorld for LevelHandles {
     fn from_world(world: &mut World) -> Self {
-        let default_levels: Vec<&'static str> = vec!["1"];
+        let default_levels: Vec<&'static str> = vec!["1", "2", "3", "6", "7", "8"];
         let custom_levels: Vec<&'static str> = vec![];
 
         let assets = world.resource::<AssetServer>();

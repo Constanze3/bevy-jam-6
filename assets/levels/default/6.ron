@@ -1,0 +1,233 @@
+(
+    name: "6",
+    author: None,
+    particles: [
+        (
+            spawn_position: (2.1796417, 218.32494),
+            particle: (
+                kind: Normal,
+                radius: 20.0,
+                color: Srgba((
+                    red: 0.05882353,
+                    green: 0.58431375,
+                    blue: 0.8862745,
+                    alpha: 1.0,
+                )),
+                initial_velocity: (0.0, 0.0),
+                subparticles: [
+                    (
+                        kind: Normal,
+                        radius: 20.0,
+                        color: Srgba((
+                            red: 0.05882353,
+                            green: 0.58431375,
+                            blue: 0.8862745,
+                            alpha: 1.0,
+                        )),
+                        initial_velocity: (700.0, 0.0),
+                        subparticles: [
+                            (
+                                kind: Normal,
+                                radius: 20.0,
+                                color: Srgba((
+                                    red: 0.05882353,
+                                    green: 0.58431375,
+                                    blue: 0.8862745,
+                                    alpha: 1.0,
+                                )),
+                                initial_velocity: (-0.00003059797, -700.0),
+                                subparticles: [
+                                    (
+                                        kind: Normal,
+                                        radius: 20.0,
+                                        color: Srgba((
+                                            red: 0.05882353,
+                                            green: 0.58431375,
+                                            blue: 0.8862745,
+                                            alpha: 1.0,
+                                        )),
+                                        initial_velocity: (-700.0, -0.00006119594),
+                                        subparticles: [],
+                                    ),
+                                ],
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+        ),
+        (
+            spawn_position: (214.329, 92.633705),
+            particle: (
+                kind: Normal,
+                radius: 20.0,
+                color: Srgba((
+                    red: 0.05882353,
+                    green: 0.58431375,
+                    blue: 0.8862745,
+                    alpha: 1.0,
+                )),
+                initial_velocity: (0.0, 0.0),
+                subparticles: [
+                    (
+                        kind: Normal,
+                        radius: 20.0,
+                        color: Srgba((
+                            red: 0.05882353,
+                            green: 0.58431375,
+                            blue: 0.8862745,
+                            alpha: 1.0,
+                        )),
+                        initial_velocity: (-0.000008742279, -200.00002),
+                        subparticles: [],
+                    ),
+                ],
+            ),
+        ),
+        (
+            spawn_position: (214.329, -126.0545),
+            particle: (
+                kind: Normal,
+                radius: 20.0,
+                color: Srgba((
+                    red: 0.05882353,
+                    green: 0.58431375,
+                    blue: 0.8862745,
+                    alpha: 1.0,
+                )),
+                initial_velocity: (0.0, 0.0),
+                subparticles: [],
+            ),
+        ),
+        (
+            spawn_position: (-372.71442, 38.869797),
+            particle: (
+                kind: Normal,
+                radius: 50.0,
+                color: Srgba((
+                    red: 0.05882353,
+                    green: 0.58431375,
+                    blue: 0.8862745,
+                    alpha: 1.0,
+                )),
+                initial_velocity: (0.0, 0.0),
+                subparticles: [],
+            ),
+        ),
+    ],
+    obstacles: [
+        (
+            transform: (
+                translation: (90.0, 140.0, 0.0),
+                rotation: (0.0, 0.0, -0.0, 1.0),
+                scale: (1.0, 1.0, 1.0),
+            ),
+            color: Srgba((
+                red: 0.62352943,
+                green: 0.43137255,
+                blue: 0.67058825,
+                alpha: 1.0,
+            )),
+            width: 30.0,
+            height: 50.0,
+            is_killer: false,
+        ),
+        (
+            transform: (
+                translation: (215.0, 304.0, 0.0),
+                rotation: (0.0, 0.0, -0.0, 1.0),
+                scale: (1.0, 1.0, 1.0),
+            ),
+            color: Srgba((
+                red: 0.62352943,
+                green: 0.43137255,
+                blue: 0.5921569,
+                alpha: 1.0,
+            )),
+            width: 601.0,
+            height: 30.0,
+            is_killer: false,
+        ),
+        (
+            transform: (
+                translation: (-78.0, 59.0, 0.0),
+                rotation: (0.0, 0.0, -0.0, 1.0),
+                scale: (1.0, 1.0, 1.0),
+            ),
+            color: Srgba((
+                red: 0.62352943,
+                green: 0.43137255,
+                blue: 0.67058825,
+                alpha: 1.0,
+            )),
+            width: 30.0,
+            height: 520.0,
+            is_killer: false,
+        ),
+        (
+            transform: (
+                translation: (213.0, 173.0, 0.0),
+                rotation: (0.0, 0.0, -0.0, 1.0),
+                scale: (1.0, 1.0, 1.0),
+            ),
+            color: Srgba((
+                red: 0.62352943,
+                green: 0.43137255,
+                blue: 0.67058825,
+                alpha: 1.0,
+            )),
+            width: 276.0,
+            height: 30.0,
+            is_killer: false,
+        ),
+        (
+            transform: (
+                translation: (359.0, -10.0, 0.0),
+                rotation: (0.0, 0.0, -0.0, 1.0),
+                scale: (1.0, 1.0, 1.0),
+            ),
+            color: Srgba((
+                red: 0.62352943,
+                green: 0.43137255,
+                blue: 0.67058825,
+                alpha: 1.0,
+            )),
+            width: 30.0,
+            height: 396.0,
+            is_killer: false,
+        ),
+        (
+            transform: (
+                translation: (530.0, 39.9, 0.0),
+                rotation: (0.0, 0.0, -0.0, 1.0),
+                scale: (1.0, 1.0, 1.0),
+            ),
+            color: Srgba((
+                red: 0.62352943,
+                green: 0.43137255,
+                blue: 0.5921569,
+                alpha: 1.0,
+            )),
+            width: 30.0,
+            height: 558.0,
+            is_killer: false,
+        ),
+        (
+            transform: (
+                translation: (141.0, -193.0, 0.0),
+                rotation: (0.0, 0.0, -0.0, 1.0),
+                scale: (1.0, 1.0, 1.0),
+            ),
+            color: Srgba((
+                red: 0.62352943,
+                green: 0.43137255,
+                blue: 0.67058825,
+                alpha: 1.0,
+            )),
+            width: 467.0,
+            height: 30.0,
+            is_killer: false,
+        ),
+    ],
+    player_spawn: (0.0, 0.0),
+)
