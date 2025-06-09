@@ -24,7 +24,7 @@
                             blue: 0.8862745,
                             alpha: 1.0,
                         )),
-                        initial_velocity: (-1000.0, -0.00008742278),
+                        initial_velocity: (-500.0, 0.00004371139),
                         subparticles: [
                             (
                                 kind: Normal,
@@ -35,7 +35,7 @@
                                     blue: 0.8862745,
                                     alpha: 1.0,
                                 )),
-                                initial_velocity: (1000.0, 0.0),
+                                initial_velocity: (500.0, 0.0),
                                 subparticles: [
                                     (
                                         kind: Normal,
@@ -46,7 +46,7 @@
                                             blue: 0.8862745,
                                             alpha: 1.0,
                                         )),
-                                        initial_velocity: (-1000.0, -0.00008742278),
+                                        initial_velocity: (-500.0, 0.00004371139),
                                         subparticles: [],
                                     ),
                                 ],
@@ -62,7 +62,7 @@
                             blue: 0.8862745,
                             alpha: 1.0,
                         )),
-                        initial_velocity: (499.9999, 866.0253),
+                        initial_velocity: (249.99998, 433.01273),
                         subparticles: [],
                     ),
                     (
@@ -74,7 +74,7 @@
                             blue: 0.8862745,
                             alpha: 1.0,
                         )),
-                        initial_velocity: (499.99997, -866.02545),
+                        initial_velocity: (249.99998, -433.01273),
                         subparticles: [],
                     ),
                 ],
@@ -102,7 +102,7 @@
                             blue: 0.0,
                             alpha: 1.0,
                         )),
-                        initial_velocity: (-999.9998, 0.00008742276),
+                        initial_velocity: (-500.0, -0.00004371139),
                         subparticles: [],
                     ),
                 ],
