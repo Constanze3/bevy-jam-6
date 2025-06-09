@@ -3,47 +3,7 @@
     author: None,
     particles: [
         (
-            spawn_position: (-533.6, -1.6000127),
-            particle: (
-                kind: Normal,
-                radius: 20.0,
-                color: Srgba((
-                    red: 0.05882353,
-                    green: 0.58431375,
-                    blue: 0.8862745,
-                    alpha: 1.0,
-                )),
-                initial_velocity: (0.0, 0.0),
-                subparticles: [
-                    (
-                        kind: Killer,
-                        radius: 20.0,
-                        color: Srgba((
-                            red: 1.0,
-                            green: 0.0,
-                            blue: 0.0,
-                            alpha: 1.0,
-                        )),
-                        initial_velocity: (192.8363, 229.81331),
-                        subparticles: [],
-                    ),
-                    (
-                        kind: Killer,
-                        radius: 20.0,
-                        color: Srgba((
-                            red: 1.0,
-                            green: 0.0,
-                            blue: 0.0,
-                            alpha: 1.0,
-                        )),
-                        initial_velocity: (192.8363, -229.81331),
-                        subparticles: [],
-                    ),
-                ],
-            ),
-        ),
-        (
-            spawn_position: (-362.4, -227.2),
+            spawn_position: (-321.6, 0.0),
             particle: (
                 kind: Normal,
                 radius: 20.0,
@@ -71,7 +31,7 @@
             ),
         ),
         (
-            spawn_position: (-362.39996, 227.2),
+            spawn_position: (321.59998, 0.0),
             particle: (
                 kind: Normal,
                 radius: 20.0,
@@ -92,42 +52,29 @@
                             blue: 0.0,
                             alpha: 1.0,
                         )),
-                        initial_velocity: (300.0, 0.0),
+                        initial_velocity: (-300.0, -0.000026226833),
                         subparticles: [],
                     ),
                 ],
             ),
         ),
         (
-            spawn_position: (100.80002, 227.2),
+            spawn_position: (0.0, 252.0),
             particle: (
-                kind: Normal,
-                radius: 20.0,
+                kind: Killer,
+                radius: 81.0,
                 color: Srgba((
-                    red: 0.05882353,
-                    green: 0.58431375,
-                    blue: 0.8862745,
+                    red: 1.0,
+                    green: 0.0,
+                    blue: 0.0,
                     alpha: 1.0,
                 )),
                 initial_velocity: (0.0, 0.0),
-                subparticles: [
-                    (
-                        kind: Killer,
-                        radius: 20.0,
-                        color: Srgba((
-                            red: 1.0,
-                            green: 0.0,
-                            blue: 0.0,
-                            alpha: 1.0,
-                        )),
-                        initial_velocity: (-500.0, -0.00004371139),
-                        subparticles: [],
-                    ),
-                ],
+                subparticles: [],
             ),
         ),
         (
-            spawn_position: (546.4, 0.0),
+            spawn_position: (0.0, -212.0),
             particle: (
                 kind: Normal,
                 radius: 20.0,
@@ -142,7 +89,7 @@
             ),
         ),
         (
-            spawn_position: (100.8, -227.2),
+            spawn_position: (-185.0, -132.0),
             particle: (
                 kind: Normal,
                 radius: 20.0,
@@ -153,24 +100,11 @@
                     alpha: 1.0,
                 )),
                 initial_velocity: (0.0, 0.0),
-                subparticles: [
-                    (
-                        kind: Normal,
-                        radius: 20.0,
-                        color: Srgba((
-                            red: 1.0,
-                            green: 0.0,
-                            blue: 0.0,
-                            alpha: 1.0,
-                        )),
-                        initial_velocity: (-500.0, -0.00004371139),
-                        subparticles: [],
-                    ),
-                ],
+                subparticles: [],
             ),
         ),
         (
-            spawn_position: (100.8, 0.0),
+            spawn_position: (185.0, -132.0),
             particle: (
                 kind: Normal,
                 radius: 20.0,
