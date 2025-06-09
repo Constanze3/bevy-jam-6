@@ -95,7 +95,7 @@ fn spawn_levels_menu(mut commands: Commands, level_assets: Res<LevelAssets>) {
                 Children::spawn(SpawnWith(move |parent: &mut RelatedSpawner<ChildOf>| {
                     for i in 0..num_default_levels {
                         parent.spawn(level_button(
-                            i.to_string(),
+                            (i + 1).to_string(),
                             Level::Default(i),
                             enter_gameplay_screen,
                         ));

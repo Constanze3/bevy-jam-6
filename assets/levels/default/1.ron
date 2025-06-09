@@ -1,0 +1,88 @@
+(
+    name: "1",
+    author: None,
+    particles: [
+        (
+            spawn_position: (-140.22202, 0.0),
+            particle: (
+                kind: Normal,
+                radius: 20.0,
+                color: Srgba((
+                    red: 0.05882353,
+                    green: 0.58431375,
+                    blue: 0.8862745,
+                    alpha: 1.0,
+                )),
+                initial_velocity: (0.0, 0.0),
+                subparticles: [
+                    (
+                        kind: Normal,
+                        radius: 20.0,
+                        color: Srgba((
+                            red: 0.49019608,
+                            green: 0.7372549,
+                            blue: 1.0,
+                            alpha: 1.0,
+                        )),
+                        initial_velocity: (-0.00006556708, 1500.0),
+                        subparticles: [],
+                    ),
+                    (
+                        kind: Normal,
+                        radius: 20.0,
+                        color: Srgba((
+                            red: 0.49019608,
+                            green: 0.7372549,
+                            blue: 1.0,
+                            alpha: 1.0,
+                        )),
+                        initial_velocity: (-0.00006556708, -1500.0),
+                        subparticles: [],
+                    ),
+                ],
+            ),
+        ),
+        (
+            spawn_position: (220.0, 0.0),
+            particle: (
+                kind: Normal,
+                radius: 20.0,
+                color: Srgba((
+                    red: 0.05882353,
+                    green: 0.5568628,
+                    blue: 0.8862745,
+                    alpha: 1.0,
+                )),
+                initial_velocity: (0.0, 0.0),
+                subparticles: [
+                    (
+                        kind: Normal,
+                        radius: 20.0,
+                        color: Srgba((
+                            red: 0.49019608,
+                            green: 0.7372549,
+                            blue: 1.0,
+                            alpha: 1.0,
+                        )),
+                        initial_velocity: (-0.00006556708, 1500.0),
+                        subparticles: [],
+                    ),
+                    (
+                        kind: Normal,
+                        radius: 20.0,
+                        color: Srgba((
+                            red: 0.49019608,
+                            green: 0.7372549,
+                            blue: 1.0,
+                            alpha: 1.0,
+                        )),
+                        initial_velocity: (-0.00006556708, -1500.0),
+                        subparticles: [],
+                    ),
+                ],
+            ),
+        ),
+    ],
+    obstacles: [],
+    player_spawn: (-370.0, 0.0),
+)

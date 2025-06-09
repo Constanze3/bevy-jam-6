@@ -55,9 +55,11 @@ pub(super) fn plugin(app: &mut App) {
         (
             handle_editor_event_exit,
             handle_editor_event_print,
+            handle_editor_event_load,
             handle_editor_event_clear,
             handle_editor_event_play,
         )
+            .chain()
             .run_if(in_state(Screen::Editor)),
     );
 
@@ -270,12 +272,14 @@ pub struct EditorState {
     placement: Object,
     selected: Option<PreviewIndex>,
     pub editing: bool,
+    load_text: String,
 }
 
 #[derive(Event, PartialEq, Eq)]
 enum EditorEvent {
     Exit,
     Print,
+    Load,
     Clear,
     Play,
 }
@@ -306,6 +310,19 @@ fn handle_editor_event_print(
 
             let ctx = contexts.ctx_mut();
             ctx.copy_text(string);
+        }
+    }
+}
+
+fn handle_editor_event_load(
+    mut events: EventReader<EditorEvent>,
+    mut editor_state: ResMut<EditorState>,
+) {
+    for event in events.read() {
+        if *event == EditorEvent::Load {
+            if let Ok(level_data) = ron::from_str::<LevelData>(&editor_state.load_text) {
+                editor_state.level = level_data;
+            }
         }
     }
 }
@@ -466,6 +483,23 @@ fn editor_ui(
                         events.write(EditorEvent::Clear);
                     }
                 });
+
+                ui.separator();
+
+                if ui.button("Load").clicked() {
+                    events.write(EditorEvent::Load);
+                }
+
+                egui::collapsing_header::CollapsingHeader::new("Load Data")
+                    .default_open(false)
+                    .show(ui, |ui| {
+                        ui.add(
+                            egui::TextEdit::multiline(&mut state.load_text)
+                                .frame(true)
+                                .desired_rows(10)
+                                .hint_text("Enter level here..."),
+                        );
+                    });
 
                 ui.separator();
 
